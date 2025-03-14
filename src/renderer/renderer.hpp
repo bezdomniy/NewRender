@@ -4,7 +4,6 @@
 
 #include <vulkan/vulkan.hpp>
 
-
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
 #else

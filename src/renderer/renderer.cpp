@@ -35,7 +35,7 @@ void Renderer::initVulkan()
   // initialize minimal set of function pointers
   VULKAN_HPP_DEFAULT_DISPATCHER.init(instance);
 #endif
-#if !defined(NDEBUG)
+#if (!defined(NDEBUG) && VULKAN_HPP_DISPATCH_LOADER_DYNAMIC == 1)
   vk::DebugUtilsMessengerEXT debugUtilsMessenger =
       instance.createDebugUtilsMessengerEXT(
           makeDebugUtilsMessengerCreateInfoEXT());
@@ -56,7 +56,6 @@ auto Renderer::createInstance() -> vk::Instance
 
 #if !defined(NDEBUG)
     enabledExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-
 #endif
 
     vk::ApplicationInfo applicationInfo(appName.c_str(),
