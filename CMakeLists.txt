@@ -1,17 +1,20 @@
 cmake_minimum_required(VERSION 3.14)
-project(NewRender)
-
-find_package(fmt CONFIG REQUIRED)
-find_package(glm CONFIG REQUIRED)
-find_package(imgui CONFIG REQUIRED)
-find_package(glfw3 REQUIRED)
-find_package(Vulkan REQUIRED)
+project(NewRender LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 
-add_executable(NewRender main.cpp)
+if (MSVC)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif()
 
-target_link_libraries(NewRender PRIVATE fmt::fmt Vulkan::Vulkan glm::glm glfw imgui::imgui)
+
+find_package(fmt CONFIG REQUIRED)
+add_executable(app)
+target_sources(app PRIVATE "src/main.cpp")
+
+target_link_libraries(app PRIVATE fmt::fmt)
+
+add_subdirectory("src/renderer")
 
 include(CTest)
 enable_testing()

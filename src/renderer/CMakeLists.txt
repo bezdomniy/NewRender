@@ -1,0 +1,6 @@
+find_package(glm CONFIG REQUIRED)
+find_package(imgui CONFIG REQUIRED)
+find_package(glfw3 REQUIRED)
+find_package(Vulkan REQUIRED)
+target_link_libraries(app PRIVATE fmt::fmt Vulkan::Vulkan glm::glm glfw imgui::imgui)
+target_sources(app PRIVATE renderer.cpp renderer.hpp)
