@@ -1,3 +1,4 @@
+
 #include <cstdlib>
 #include <exception>
 
@@ -5,6 +6,7 @@
 
 #include <fmt/base.h>
 #include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan_enums.hpp>
 #include <vulkan/vulkan_handles.hpp>
 #include <vulkan/vulkan_structs.hpp>
 
@@ -31,13 +33,30 @@ void Renderer::cleanup() {}
 auto Renderer::createInstance() -> vk::Instance
 {
   try {
+    std::vector<const char*> extNames;
+    extNames.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+    extNames.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+
     vk::ApplicationInfo applicationInfo(appName.c_str(),
                                         VK_MAKE_VERSION(0, 0, 1),
                                         "NewEngine",
                                         VK_MAKE_VERSION(0, 0, 1),
                                         VK_API_VERSION_1_4);
 
-    vk::InstanceCreateInfo instanceCreateInfo({}, &applicationInfo);
+#ifdef __APPLE__
+    vk::InstanceCreateFlags flags = vk::InstanceCreateFlags {
+        vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR};
+#else
+    vk::InstanceCreateFlags flags = vk::InstanceCreateFlags {};
+#endif
+
+    vk::InstanceCreateInfo instanceCreateInfo(
+        flags,
+        &applicationInfo,
+        0,
+        nullptr,
+        static_cast<uint32_t>(extNames.size()),
+        extNames.data());
 
     return vk::createInstance(instanceCreateInfo);
   } catch (vk::SystemError& err) {
