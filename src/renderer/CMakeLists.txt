@@ -4,7 +4,8 @@ add_library(renderer STATIC)
 target_sources(renderer PRIVATE 
     renderer.cpp 
     renderer.hpp 
-    validation.cpp validation.hpp
+    validation.cpp 
+    validation.hpp
 )
 
 # Add include directory for the renderer library
@@ -12,5 +13,5 @@ target_include_directories(renderer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(renderer PUBLIC VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1)
 
 # Link the 'renderer' library with its dependencies
-target_link_libraries(renderer PRIVATE Vulkan::Vulkan glm::glm glfw imgui::imgui fmt::fmt)
+target_link_libraries(renderer PRIVATE Vulkan::Vulkan glm::glm glfw imgui::imgui)
 target_precompile_headers(renderer PRIVATE <vulkan/vulkan.hpp>)

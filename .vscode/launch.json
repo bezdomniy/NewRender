@@ -17,6 +17,14 @@
             "program": "${command:cmake.launchTargetPath}",
             "args": [],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "(CodeLLDB) Launch",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }
