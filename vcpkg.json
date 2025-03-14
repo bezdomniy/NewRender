@@ -1,0 +1,9 @@
+{
+  "dependencies": [
+    "fmt",
+    "glfw3",
+    "glm",
+    "vulkan",
+    "imgui"
+  ]
+}
