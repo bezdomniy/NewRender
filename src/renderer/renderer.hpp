@@ -1,10 +1,12 @@
 #pragma once
 
-#include <fmt/core.h>
 #include <string>
+
+#include <fmt/core.h>
 #include <vulkan/vulkan.hpp>
 
-class Renderer {
+class Renderer
+{
 public:
   Renderer(std::string name);
   ~Renderer();
