@@ -7,7 +7,6 @@
 #include <vulkan/vulkan_structs.hpp>
 
 #include "validation.hpp"
-#include "vulkan/vulkan_hpp_macros.hpp"
 
 #if VULKAN_HPP_DISPATCH_LOADER_DYNAMIC == 1
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
@@ -16,7 +15,10 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 Renderer::Renderer(std::string name)
     : appName(name) {};
 
-Renderer::~Renderer() {}
+Renderer::~Renderer()
+{
+  cleanup();
+}
 
 void Renderer::run()
 {
@@ -26,36 +28,36 @@ void Renderer::run()
 
 void Renderer::initVulkan()
 {
-#if (VULKAN_HPP_DISPATCH_LOADER_DYNAMIC == 1)
-  // initialize minimal set of function pointers
-  VULKAN_HPP_DEFAULT_DISPATCHER.init();
-#endif
-  instance = createInstance();
-#if (VULKAN_HPP_DISPATCH_LOADER_DYNAMIC == 1)
-  // initialize minimal set of function pointers
-  VULKAN_HPP_DEFAULT_DISPATCHER.init(instance);
-#endif
-#if (!defined(NDEBUG) && VULKAN_HPP_DISPATCH_LOADER_DYNAMIC == 1)
-  vk::DebugUtilsMessengerEXT debugUtilsMessenger =
-      instance.createDebugUtilsMessengerEXT(
-          makeDebugUtilsMessengerCreateInfoEXT());
+  createDevice();
+#if !defined(NDEBUG)
+  debugUtilsMessenger = instance.createDebugUtilsMessengerEXT(
+      makeDebugUtilsMessengerCreateInfoEXT());
 #endif
 }
 
 void Renderer::render() {}
 
-void Renderer::cleanup() {}
+void Renderer::cleanup()
+{
+  device.destroy();
+#if !defined(NDEBUG)
+  instance.destroyDebugUtilsMessengerEXT(debugUtilsMessenger);
+#endif
+  instance.destroy();
+}
 
-auto Renderer::createInstance() -> vk::Instance
+void Renderer::createDevice()
 {
   try {
     std::vector<const char*> enabledExtensions;
-    enabledExtensions.push_back(
-        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-    enabledExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 
 #if !defined(NDEBUG)
     enabledExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+#endif
+
+    std::vector<const char*> enabledLayers;
+#if !defined(NDEBUG)
+    enabledLayers.push_back("VK_LAYER_KHRONOS_validation");
 #endif
 
     vk::ApplicationInfo applicationInfo(appName.c_str(),
@@ -67,19 +69,73 @@ auto Renderer::createInstance() -> vk::Instance
 #ifdef __APPLE__
     vk::InstanceCreateFlags flags = vk::InstanceCreateFlags {
         vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR};
+
+    enabledExtensions.push_back(
+        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+    enabledExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 #else
     vk::InstanceCreateFlags flags = vk::InstanceCreateFlags {};
+#endif
+
+#if (VULKAN_HPP_DISPATCH_LOADER_DYNAMIC == 1)
+    // initialize with explicitly providing a DynamicLoader
+    vk::detail::DynamicLoader dl;
+    VULKAN_HPP_DEFAULT_DISPATCHER.init(dl);
 #endif
 
     vk::InstanceCreateInfo instanceCreateInfo(
         flags,
         &applicationInfo,
-        0,
-        nullptr,
+        static_cast<uint32_t>(enabledLayers.size()),
+        enabledLayers.data(),
         static_cast<uint32_t>(enabledExtensions.size()),
         enabledExtensions.data());
 
-    return vk::createInstance(instanceCreateInfo);
+    instance = vk::createInstance(instanceCreateInfo);
+
+#if (VULKAN_HPP_DISPATCH_LOADER_DYNAMIC == 1)
+    // initialize minimal set of function pointers
+    VULKAN_HPP_DEFAULT_DISPATCHER.init(instance);
+#endif
+
+    auto physicalDevice = instance.enumeratePhysicalDevices().front();
+    auto queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
+
+    // get the first index into queueFamiliyProperties which supports graphics
+    auto propertyIterator =
+        std::find_if(queueFamilyProperties.begin(),
+                     queueFamilyProperties.end(),
+                     [](vk::QueueFamilyProperties const& qfp)
+                     { return qfp.queueFlags & vk::QueueFlagBits::eGraphics; });
+    auto graphicsQueueFamilyIndex =
+        std::distance(queueFamilyProperties.begin(), propertyIterator);
+    assert(graphicsQueueFamilyIndex < queueFamilyProperties.size());
+
+    // create a Device
+    float queuePriority = 0.0f;
+    vk::DeviceQueueCreateInfo deviceQueueCreateInfo(
+        vk::DeviceQueueCreateFlags(),
+        static_cast<uint32_t>(graphicsQueueFamilyIndex),
+        1,
+        &queuePriority);
+
+    std::vector<const char*> enabledDeviceExtensions;
+#ifdef __APPLE__
+    #ifndef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
+    #define VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME "VK_KHR_portability_subset"
+    #endif
+
+    enabledDeviceExtensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+#endif
+
+    vk::DeviceCreateInfo deviceCreateInfo(vk::DeviceCreateFlags(),
+                                          deviceQueueCreateInfo,
+                                          {},
+                                          enabledDeviceExtensions
+                                        );
+
+    device = physicalDevice.createDevice(deviceCreateInfo);
+
   } catch (vk::SystemError& err) {
     fmt::println("vk::SystemError: {}", err.what());
     exit(-1);

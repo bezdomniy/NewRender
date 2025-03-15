@@ -4,12 +4,6 @@
 
 #include <vulkan/vulkan.hpp>
 
-#ifdef NDEBUG
-const bool enableValidationLayers = false;
-#else
-const bool enableValidationLayers = true;
-#endif
-
 class Renderer
 {
 public:
@@ -22,10 +16,15 @@ private:
   std::string appName;
 
   vk::Instance instance;
+  vk::Device device;
+
+#if !defined(NDEBUG)
+  vk::DebugUtilsMessengerEXT debugUtilsMessenger;
+#endif
 
   void initVulkan();
   void render();
   void cleanup();
 
-  vk::Instance createInstance();
+  void createDevice();
 };
