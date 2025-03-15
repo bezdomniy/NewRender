@@ -4,10 +4,12 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include "../application/window.hpp"
+
 class Renderer
 {
 public:
-  Renderer(std::string name);
+  Renderer(std::string name, Window* window);
   ~Renderer();
 
   void run();
@@ -16,6 +18,8 @@ private:
   std::string appName;
 
   vk::Instance instance;
+  Window* window;
+  vk::SurfaceKHR surface;
   vk::Device device;
 
 #if !defined(NDEBUG)

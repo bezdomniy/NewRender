@@ -1,10 +1,6 @@
 #include "renderer.hpp"
 
 #include <fmt/base.h>
-#include <vulkan/vulkan_core.h>
-#include <vulkan/vulkan_enums.hpp>
-#include <vulkan/vulkan_handles.hpp>
-#include <vulkan/vulkan_structs.hpp>
 
 #include "validation.hpp"
 
@@ -12,8 +8,9 @@
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 #endif
 
-Renderer::Renderer(std::string name)
-    : appName(name) {};
+Renderer::Renderer(std::string name, Window* window)
+    : window(window)
+    , appName(name) {};
 
 Renderer::~Renderer()
 {
@@ -43,13 +40,18 @@ void Renderer::cleanup()
 #if !defined(NDEBUG)
   instance.destroyDebugUtilsMessengerEXT(debugUtilsMessenger);
 #endif
+  vkDestroySurfaceKHR(instance, surface, nullptr);
   instance.destroy();
 }
 
 void Renderer::createDevice()
 {
   try {
-    std::vector<const char*> enabledExtensions;
+    uint32_t glfwExtensionCount = 0;
+    auto glfwExtensions = window->getExtensions(&glfwExtensionCount);
+
+    std::vector<const char*> enabledExtensions(
+        glfwExtensions, glfwExtensions + glfwExtensionCount);
 
 #if !defined(NDEBUG)
     enabledExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -98,32 +100,59 @@ void Renderer::createDevice()
     VULKAN_HPP_DEFAULT_DISPATCHER.init(instance);
 #endif
 
-    auto physicalDevice = instance.enumeratePhysicalDevices().front();
-    auto queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
+    auto physicalDevices = instance.enumeratePhysicalDevices();
+    vk::PhysicalDevice physicalDevice;
 
-    // get the first index into queueFamiliyProperties which supports graphics
-    auto propertyIterator =
-        std::find_if(queueFamilyProperties.begin(),
-                     queueFamilyProperties.end(),
-                     [](vk::QueueFamilyProperties const& qfp)
-                     { return qfp.queueFlags & vk::QueueFlagBits::eGraphics; });
-    auto graphicsQueueFamilyIndex =
-        std::distance(queueFamilyProperties.begin(), propertyIterator);
-    assert(graphicsQueueFamilyIndex < queueFamilyProperties.size());
+    uint32_t graphicsQueueFamilyIndex = 0;
+    bool foundGraphicsQueue = false;
+    for (size_t i = 0; i < physicalDevices.size() && !foundGraphicsQueue; i++) {
+      physicalDevice = physicalDevices[i];
+
+      auto queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
+
+      if (queueFamilyProperties.empty()) {
+        throw std::runtime_error("No queue family found.");
+      }
+
+      if (surface) {
+        instance.destroySurfaceKHR(surface);
+      }
+
+      surface = window->create_surface(instance, physicalDevice);
+
+      // get the first index into queueFamiliyProperties which supports graphics
+      for (uint32_t i = 0; i < queueFamilyProperties.size(); i++) {
+        vk::Bool32 supports_present =
+            physicalDevice.getSurfaceSupportKHR(i, surface);
+        if ((queueFamilyProperties[i].queueFlags & vk::QueueFlagBits::eGraphics)
+            && supports_present)
+        {
+          graphicsQueueFamilyIndex = i;
+          foundGraphicsQueue = true;
+          break;
+        }
+      }
+    }
+    if (!foundGraphicsQueue) {
+      throw std::runtime_error(
+          "Did not find suitable queue which supports graphics and "
+          "presentation.");
+    }
 
     // create a Device
     float queuePriority = 0.0f;
     vk::DeviceQueueCreateInfo deviceQueueCreateInfo(
         vk::DeviceQueueCreateFlags(),
-        static_cast<uint32_t>(graphicsQueueFamilyIndex),
+        graphicsQueueFamilyIndex,
         1,
         &queuePriority);
 
-    std::vector<const char*> enabledDeviceExtensions;
+    std::vector<const char*> enabledDeviceExtensions {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 #ifdef __APPLE__
-    #ifndef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
-    #define VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME "VK_KHR_portability_subset"
-    #endif
+#  ifndef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
+#    define VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME "VK_KHR_portability_subset"
+#  endif
 
     enabledDeviceExtensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
 #endif
@@ -131,8 +160,7 @@ void Renderer::createDevice()
     vk::DeviceCreateInfo deviceCreateInfo(vk::DeviceCreateFlags(),
                                           deviceQueueCreateInfo,
                                           {},
-                                          enabledDeviceExtensions
-                                        );
+                                          enabledDeviceExtensions);
 
     device = physicalDevice.createDevice(deviceCreateInfo);
 

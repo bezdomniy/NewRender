@@ -14,12 +14,15 @@ find_package(glfw3 CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
 
 add_executable(app)
-target_sources(app PRIVATE "src/main.cpp")
+target_sources(app PRIVATE src/main.cpp)
 target_include_directories(app PRIVATE "${PROJECT_SOURCE_DIR}")
 
 target_link_libraries(app PRIVATE fmt::fmt)
 add_subdirectory("src/renderer")
 target_link_libraries(app PRIVATE renderer)
+add_subdirectory("src/application")
+target_link_libraries(app PRIVATE application)
+
 
 include(CTest)
 enable_testing()
