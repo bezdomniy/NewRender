@@ -172,6 +172,10 @@ void Renderer::createDevice()
                                         enabledDeviceExtensions);
 
   device = physicalDevice.createDevice(deviceCreateInfo);
+
+  device.getQueue(queueFamilyIndices.graphicsFamily.value(), 0, &graphicsQueue);
+  device.getQueue(queueFamilyIndices.presentFamily.value(), 0, &presentQueue);
+  device.getQueue(queueFamilyIndices.computeFamily.value(), 0, &computeQueue);
 }
 
 Renderer::QueueFamilyIndices Renderer::findQueueFamilies(vk::PhysicalDevice device) {
@@ -187,6 +191,10 @@ Renderer::QueueFamilyIndices Renderer::findQueueFamilies(vk::PhysicalDevice devi
   for (const auto& queueFamily : queueFamilies) {
       if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {
           indices.graphicsFamily = i;
+      }
+
+      if (queueFamily.queueFlags & vk::QueueFlagBits::eCompute) {
+        indices.computeFamily = i;
       }
 
       VkBool32 presentSupport = false;

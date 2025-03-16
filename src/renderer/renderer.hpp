@@ -26,6 +26,7 @@ private:
   struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
     std::optional<uint32_t> presentFamily;
+    std::optional<uint32_t> computeFamily;
 
     bool isComplete() {
         return graphicsFamily.has_value() && presentFamily.has_value();
@@ -49,6 +50,7 @@ private:
   vk::Device device {VK_NULL_HANDLE};
   vk::Queue graphicsQueue {VK_NULL_HANDLE};
   vk::Queue presentQueue {VK_NULL_HANDLE};
+  vk::Queue computeQueue {VK_NULL_HANDLE};
   vk::CommandPool commandPool {VK_NULL_HANDLE};
   std::vector<vk::CommandBuffer> commandBuffers;
   vk::SwapchainKHR swapchain {VK_NULL_HANDLE};
