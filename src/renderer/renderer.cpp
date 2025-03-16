@@ -38,6 +38,14 @@ void Renderer::run()
   fmt::print("Hello {}!\n", appName);
 }
 
+void Renderer::createBuffer(std::string name,
+                            void* data,
+                            size_t size,
+                            vk::BufferUsageFlags usageFlags,
+                            vk::MemoryPropertyFlags memoryFlags) {
+  // TODO
+};
+
 void Renderer::initVulkan()
 {
   createInstance();

@@ -13,6 +13,11 @@ public:
   Renderer(std::string name, Window* window);
   ~Renderer();
 
+  void createBuffer(std::string name,
+                    void* data,
+                    size_t size,
+                    vk::BufferUsageFlags usageFlags,
+                    vk::MemoryPropertyFlags memoryFlags);
   void run();
 
 private:
