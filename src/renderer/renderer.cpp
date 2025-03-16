@@ -5,7 +5,6 @@
 
 #include <fmt/base.h>
 
-#include "buffer.hpp"
 #include "validation.hpp"
 
 #if VULKAN_HPP_DISPATCH_LOADER_DYNAMIC == 1
@@ -18,23 +17,12 @@ Renderer::Renderer(std::string name, Window* window)
 
 Renderer::~Renderer()
 {
-  // cleanup();
+  cleanup();
 }
 
 void Renderer::run()
 {
   initVulkan();
-
-  std::vector<uint32_t> numbers {1, 2, 3};
-
-  Buffer testBuf(device,
-                 memoryProperties,
-                 numbers.data(),
-                 numbers.size() * sizeof(uint32_t),
-                 vk::BufferUsageFlagBits::eUniformBuffer,
-                 vk::MemoryPropertyFlagBits::eHostVisible
-                     | vk::MemoryPropertyFlagBits::eHostCoherent);
-
   fmt::print("Hello {}!\n", appName);
 }
 
@@ -43,7 +31,7 @@ void Renderer::createBuffer(std::string name,
                             size_t size,
                             vk::BufferUsageFlags usageFlags,
                             vk::MemoryPropertyFlags memoryFlags) {
-  // TODO
+  buffers.try_emplace(name, device, memoryProperties, data, size, usageFlags, memoryFlags);
 };
 
 void Renderer::initVulkan()
@@ -57,6 +45,12 @@ void Renderer::render() {}
 
 void Renderer::cleanup()
 {
+  buffers.clear();
+  device.destroyCommandPool(commandPool);
+  for (auto& imageView : imagesViews) {
+    device.destroyImageView(imageView);
+  }
+  device.destroySwapchainKHR(swapchain);
   device.destroy();
 #if !defined(NDEBUG)
   instance.destroyDebugUtilsMessengerEXT(debugUtilsMessenger);

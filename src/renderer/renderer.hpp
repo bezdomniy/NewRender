@@ -1,11 +1,13 @@
 #pragma once
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <vulkan/vulkan.hpp>
 
 #include "../application/window.hpp"
+#include "buffer.hpp"
 
 class Renderer
 {
@@ -34,6 +36,7 @@ private:
   vk::SwapchainKHR swapchain {VK_NULL_HANDLE};
   std::vector<vk::Image> images;
   std::vector<vk::ImageView> imagesViews;
+  std::unordered_map<std::string, Buffer> buffers;
 
 #if !defined(NDEBUG)
   vk::DebugUtilsMessengerEXT debugUtilsMessenger {VK_NULL_HANDLE};
