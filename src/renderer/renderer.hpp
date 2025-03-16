@@ -23,21 +23,24 @@ public:
   void run();
 
 private:
-  struct QueueFamilyIndices {
+  struct QueueFamilyIndices
+  {
     std::optional<uint32_t> graphicsFamily;
     std::optional<uint32_t> presentFamily;
     std::optional<uint32_t> computeFamily;
 
-    bool isComplete() {
-        return graphicsFamily.has_value() && presentFamily.has_value();
+    bool isComplete()
+    {
+      return graphicsFamily.has_value() && presentFamily.has_value();
     }
   };
 
-  struct SwapChainSupportDetails {
+  struct SwapChainSupportDetails
+  {
     vk::SurfaceCapabilitiesKHR capabilities;
     std::vector<vk::SurfaceFormatKHR> formats;
     std::vector<vk::PresentModeKHR> presentModes;
-};
+  };
 
   std::string appName;
 
@@ -72,9 +75,18 @@ private:
   void createInstance();
   void pickPhysicalDevice();
   void createDevice();
+  void createSwapchain();
 
   QueueFamilyIndices findQueueFamilies(vk::PhysicalDevice device);
   SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice device);
   void pickPhysicalDevice(std::vector<const char*>& deviceExtensions);
-  bool checkDeviceExtensionSupport(vk::PhysicalDevice device, const std::vector<const char*>& deviceExtensions);
+  bool checkDeviceExtensionSupport(
+      vk::PhysicalDevice device,
+      const std::vector<const char*>& deviceExtensions);
+
+  vk::SurfaceFormatKHR chooseSwapSurfaceFormat(
+      const std::vector<vk::SurfaceFormatKHR>& availableFormats);
+  vk::PresentModeKHR chooseSwapPresentMode(
+      const std::vector<vk::PresentModeKHR>& availablePresentModes);
+  vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities);
 };
