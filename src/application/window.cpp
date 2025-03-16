@@ -59,7 +59,7 @@ auto Window::create_surface(vk::Instance instance,
     throw std::runtime_error("Failed to create window surface.");
   }
 
-  return vk::SurfaceKHR(surface);
+  return static_cast<vk::SurfaceKHR>(surface);
 }
 
 const Window::Extent& Window::getExtent() const
