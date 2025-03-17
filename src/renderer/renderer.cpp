@@ -46,7 +46,8 @@ void Renderer::initVulkan()
   createInstance();
   surface = window->create_surface(instance);
 
-  device = std::make_unique<Device>(instance, surface);
+  // device = std::make_unique<Device>(instance);
+  device = std::make_unique<Device>(instance, &surface);
 
   swapchain = device->createSwapchain();
   images = device->getSwapchainImages(swapchain);
@@ -62,7 +63,9 @@ void Renderer::cleanup()
   for (auto& imageView : imagesViews) {
     device->handle.destroyImageView(imageView);
   }
-  device->handle.destroySwapchainKHR(swapchain);
+  if (swapchain != VK_NULL_HANDLE) {
+    device->handle.destroySwapchainKHR(swapchain);
+  }
   device->destroy();
 #if !defined(NDEBUG)
   instance.destroyDebugUtilsMessengerEXT(debugUtilsMessenger);

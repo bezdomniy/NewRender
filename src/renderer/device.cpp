@@ -3,7 +3,43 @@
 
 #include "device.hpp"
 
-Device::Device(vk::Instance& instance, vk::SurfaceKHR& surface)
+Device::Device(vk::Instance& instance)
+    : instance(instance)
+{
+  std::vector<const char*> enabledDeviceExtensions {};
+  pickPhysicalDevice(enabledDeviceExtensions, false);
+
+  queueFamilyIndices = findQueueFamilies(physicalDevice, false);
+
+  memoryProperties = physicalDevice.getMemoryProperties();
+
+  // create a Device
+  float queuePriority = 0.0f;
+  vk::DeviceQueueCreateInfo deviceQueueCreateInfo(
+      vk::DeviceQueueCreateFlags(),
+      queueFamilyIndices.computeFamily.value(),
+      1,
+      &queuePriority);
+
+#ifdef __APPLE__
+#  ifndef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
+#    define VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME "VK_KHR_portability_subset"
+#  endif
+
+  enabledDeviceExtensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+#endif
+
+  vk::DeviceCreateInfo deviceCreateInfo(vk::DeviceCreateFlags(),
+                                        deviceQueueCreateInfo,
+                                        {},
+                                        enabledDeviceExtensions);
+
+  handle = physicalDevice.createDevice(deviceCreateInfo);
+
+  handle.getQueue(queueFamilyIndices.computeFamily.value(), 0, &computeQueue);
+}
+
+Device::Device(vk::Instance& instance, vk::SurfaceKHR* surface)
     : instance(instance)
     , surface(surface)
 {
@@ -70,7 +106,7 @@ vk::SwapchainKHR Device::createSwapchain()
 
   vk::SwapchainCreateInfoKHR createInfo(
       vk::SwapchainCreateFlagsKHR(),
-      surface,
+      *surface,
       imageCount,
       surfaceFormat.format,
       surfaceFormat.colorSpace,
@@ -138,24 +174,24 @@ Device::SwapChainSupportDetails Device::querySwapChainSupport(
 {
   SwapChainSupportDetails details;
 
-  (void)device.getSurfaceCapabilitiesKHR(surface, &details.capabilities);
+  (void)device.getSurfaceCapabilitiesKHR(*surface, &details.capabilities);
 
   uint32_t formatCount;
-  (void)device.getSurfaceFormatsKHR(surface, &formatCount, nullptr);
+  (void)device.getSurfaceFormatsKHR(*surface, &formatCount, nullptr);
 
   if (formatCount != 0) {
     details.formats.resize(formatCount);
     (void)device.getSurfaceFormatsKHR(
-        surface, &formatCount, details.formats.data());
+        *surface, &formatCount, details.formats.data());
   }
 
   uint32_t presentModeCount;
-  (void)device.getSurfacePresentModesKHR(surface, &presentModeCount, nullptr);
+  (void)device.getSurfacePresentModesKHR(*surface, &presentModeCount, nullptr);
 
   if (presentModeCount != 0) {
     details.presentModes.resize(presentModeCount);
     (void)device.getSurfacePresentModesKHR(
-        surface, &presentModeCount, details.presentModes.data());
+        *surface, &presentModeCount, details.presentModes.data());
   }
 
   return details;
@@ -235,7 +271,8 @@ bool Device::checkDeviceExtensionSupport(
   return requiredExtensions.empty();
 }
 
-Device::QueueFamilyIndices Device::findQueueFamilies(vk::PhysicalDevice device)
+Device::QueueFamilyIndices Device::findQueueFamilies(vk::PhysicalDevice device,
+                                                     bool graphicsRequired)
 {
   QueueFamilyIndices indices;
 
@@ -247,26 +284,30 @@ Device::QueueFamilyIndices Device::findQueueFamilies(vk::PhysicalDevice device)
 
   int i = 0;
   for (const auto& queueFamily : queueFamilies) {
-    if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {
-      indices.graphicsFamily = i;
-    }
-
     if (queueFamily.queueFlags & vk::QueueFlagBits::eCompute) {
       indices.computeFamily = i;
     }
 
-    VkBool32 presentSupport = false;
-    auto result = device.getSurfaceSupportKHR(i, surface, &presentSupport);
+    if (graphicsRequired) {
+      if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {
+        indices.graphicsFamily = i;
+      }
 
-    if (result != vk::Result::eSuccess) {
-      throw std::runtime_error("Failed to create window surface.");
+      VkBool32 presentSupport = false;
+      auto result = device.getSurfaceSupportKHR(i, *surface, &presentSupport);
+
+      if (result != vk::Result::eSuccess) {
+        throw std::runtime_error("Failed to create window surface.");
+      }
+
+      if (presentSupport) {
+        indices.presentFamily = i;
+      }
     }
 
-    if (presentSupport) {
-      indices.presentFamily = i;
-    }
-
-    if (indices.isComplete()) {
+    if ((graphicsRequired && indices.isComplete())
+        || (!graphicsRequired && indices.computeFamily.has_value()))
+    {
       break;
     }
 
@@ -276,7 +317,8 @@ Device::QueueFamilyIndices Device::findQueueFamilies(vk::PhysicalDevice device)
   return indices;
 }
 
-void Device::pickPhysicalDevice(std::vector<const char*>& deviceExtensions)
+void Device::pickPhysicalDevice(std::vector<const char*>& deviceExtensions,
+                                bool graphicsRequired)
 {
   uint32_t deviceCount = 0;
   (void)instance.enumeratePhysicalDevices(&deviceCount, nullptr);
@@ -289,20 +331,25 @@ void Device::pickPhysicalDevice(std::vector<const char*>& deviceExtensions)
   (void)instance.enumeratePhysicalDevices(&deviceCount, devices.data());
 
   for (const auto& device : devices) {
-    QueueFamilyIndices indices = findQueueFamilies(device);
-
     bool extensionsSupported =
         checkDeviceExtensionSupport(device, deviceExtensions);
 
-    bool swapChainAdequate = false;
-    if (extensionsSupported) {
-      SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
-      swapChainAdequate = !swapChainSupport.formats.empty()
-          && !swapChainSupport.presentModes.empty();
+    bool swapChainAdequate = true;
+    if (graphicsRequired) {
+      swapChainAdequate = false;
+      if (extensionsSupported) {
+        SwapChainSupportDetails swapChainSupport =
+            querySwapChainSupport(device);
+        swapChainAdequate = !swapChainSupport.formats.empty()
+            && !swapChainSupport.presentModes.empty();
+      }
     }
 
+    auto indices = findQueueFamilies(device, graphicsRequired);
     auto deviceSuitable =
-        indices.isComplete() && extensionsSupported && swapChainAdequate;
+        ((indices.isComplete() && swapChainAdequate)
+         || (!graphicsRequired && indices.computeFamily.has_value()))
+        && extensionsSupported;
     if (deviceSuitable) {
       physicalDevice = device;
       break;

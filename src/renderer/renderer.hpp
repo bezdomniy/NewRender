@@ -41,7 +41,6 @@ private:
   std::unordered_map<std::string, Buffer> buffers;
 
   std::unique_ptr<Device> device = nullptr;
-  // Device device;
 
 #if !defined(NDEBUG)
   vk::DebugUtilsMessengerEXT debugUtilsMessenger {VK_NULL_HANDLE};

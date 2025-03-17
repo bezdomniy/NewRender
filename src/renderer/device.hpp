@@ -1,11 +1,14 @@
 #pragma once
 
+#include <memory>
+
 #include <vulkan/vulkan.hpp>
 
 class Device
 {
 public:
-  Device(vk::Instance& instance, vk::SurfaceKHR& surface);
+  Device(vk::Instance& instance);
+  Device(vk::Instance& instance, vk::SurfaceKHR* surface);
   ~Device();
   void destroy();
 
@@ -30,7 +33,8 @@ private:
 
     bool isComplete()
     {
-      return graphicsFamily.has_value() && presentFamily.has_value();
+      return graphicsFamily.has_value() && presentFamily.has_value()
+          && computeFamily.has_value();
     }
   };
 
@@ -42,7 +46,7 @@ private:
   };
 
   vk::Instance& instance;
-  vk::SurfaceKHR& surface;
+  vk::SurfaceKHR* surface = nullptr;
   QueueFamilyIndices queueFamilyIndices;
 
   SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice device);
@@ -53,8 +57,10 @@ private:
       const std::vector<vk::PresentModeKHR>& availablePresentModes);
   vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities);
 
-  void pickPhysicalDevice(std::vector<const char*>& deviceExtensions);
-  QueueFamilyIndices findQueueFamilies(vk::PhysicalDevice device);
+  void pickPhysicalDevice(std::vector<const char*>& deviceExtensions,
+                          bool graphicsRequired = true);
+  QueueFamilyIndices findQueueFamilies(vk::PhysicalDevice device,
+                                       bool graphicsRequired = true);
   bool checkDeviceExtensionSupport(
       vk::PhysicalDevice device,
       const std::vector<const char*>& deviceExtensions);
