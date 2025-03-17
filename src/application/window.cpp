@@ -42,8 +42,7 @@ auto Window::getExtensions(uint32_t* count) -> const char**
   return glfwGetRequiredInstanceExtensions(count);
 }
 
-auto Window::create_surface(vk::Instance instance,
-                            vk::PhysicalDevice physicalDevice) -> vk::SurfaceKHR
+auto Window::create_surface(vk::Instance instance) -> vk::SurfaceKHR
 {
   if (instance == VK_NULL_HANDLE || !handle) {
     throw std::runtime_error("Instance or window handle is null.");

@@ -26,8 +26,7 @@ public:
     Extent extent = {1280, 720};
   };
 
-  auto create_surface(vk::Instance instance, vk::PhysicalDevice physicalDevice)
-      -> vk::SurfaceKHR;
+  auto create_surface(vk::Instance instance) -> vk::SurfaceKHR;
 
   auto getExtensions(uint32_t* count) -> const char**;
   const Extent& getExtent() const;

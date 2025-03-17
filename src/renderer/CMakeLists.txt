@@ -4,6 +4,8 @@ add_library(renderer STATIC)
 target_sources(renderer PRIVATE 
     renderer.cpp 
     renderer.hpp 
+    device.cpp
+    device.hpp
     buffer.cpp
     buffer.hpp
     validation.cpp 

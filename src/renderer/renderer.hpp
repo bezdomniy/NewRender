@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -8,6 +9,7 @@
 
 #include "../application/window.hpp"
 #include "buffer.hpp"
+#include "device.hpp"
 
 class Renderer
 {
@@ -23,37 +25,12 @@ public:
   void run();
 
 private:
-  struct QueueFamilyIndices
-  {
-    std::optional<uint32_t> graphicsFamily;
-    std::optional<uint32_t> presentFamily;
-    std::optional<uint32_t> computeFamily;
-
-    bool isComplete()
-    {
-      return graphicsFamily.has_value() && presentFamily.has_value();
-    }
-  };
-
-  struct SwapChainSupportDetails
-  {
-    vk::SurfaceCapabilitiesKHR capabilities;
-    std::vector<vk::SurfaceFormatKHR> formats;
-    std::vector<vk::PresentModeKHR> presentModes;
-  };
-
   std::string appName;
 
   vk::Instance instance {VK_NULL_HANDLE};
 
   Window* window = nullptr;
   vk::SurfaceKHR surface {VK_NULL_HANDLE};
-  vk::PhysicalDeviceMemoryProperties memoryProperties;
-  vk::PhysicalDevice physicalDevice {VK_NULL_HANDLE};
-  vk::Device device {VK_NULL_HANDLE};
-  vk::Queue graphicsQueue {VK_NULL_HANDLE};
-  vk::Queue presentQueue {VK_NULL_HANDLE};
-  vk::Queue computeQueue {VK_NULL_HANDLE};
   vk::CommandPool commandPool {VK_NULL_HANDLE};
   std::vector<vk::CommandBuffer> commandBuffers;
   vk::SwapchainKHR swapchain {VK_NULL_HANDLE};
@@ -62,7 +39,9 @@ private:
   std::vector<vk::Image> images;
   std::vector<vk::ImageView> imagesViews;
   std::unordered_map<std::string, Buffer> buffers;
-  QueueFamilyIndices queueFamilyIndices;
+
+  std::unique_ptr<Device> device = nullptr;
+  // Device device;
 
 #if !defined(NDEBUG)
   vk::DebugUtilsMessengerEXT debugUtilsMessenger {VK_NULL_HANDLE};
@@ -73,20 +52,4 @@ private:
   void cleanup();
 
   void createInstance();
-  void pickPhysicalDevice();
-  void createDevice();
-  void createSwapchain();
-
-  QueueFamilyIndices findQueueFamilies(vk::PhysicalDevice device);
-  SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice device);
-  void pickPhysicalDevice(std::vector<const char*>& deviceExtensions);
-  bool checkDeviceExtensionSupport(
-      vk::PhysicalDevice device,
-      const std::vector<const char*>& deviceExtensions);
-
-  vk::SurfaceFormatKHR chooseSwapSurfaceFormat(
-      const std::vector<vk::SurfaceFormatKHR>& availableFormats);
-  vk::PresentModeKHR chooseSwapPresentMode(
-      const std::vector<vk::PresentModeKHR>& availablePresentModes);
-  vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities);
 };
