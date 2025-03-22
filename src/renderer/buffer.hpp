@@ -16,9 +16,10 @@ public:
          vk::MemoryPropertyFlags memoryFlags);
   ~Buffer();
 
-private:
-  vk::DeviceMemory memory {VK_NULL_HANDLE};
   vk::Buffer handle {VK_NULL_HANDLE};
+  vk::DeviceMemory memory {VK_NULL_HANDLE};
+
+private:
   vk::Device& device;
 
   uint32_t findMemoryType(

@@ -1,7 +1,13 @@
+#include <cstdint>
 #include <set>
 #include <vector>
 
 #include "device.hpp"
+
+#include <vulkan/vulkan_handles.hpp>
+#include <vulkan/vulkan_structs.hpp>
+
+#include "compute.hpp"
 
 Device::Device(vk::Instance& instance)
     : instance(instance)
@@ -84,6 +90,62 @@ Device::~Device() {}
 void Device::destroy()
 {
   handle.destroy();
+}
+
+vk::CommandPool Device::createCommandPool(vk::CommandPoolCreateFlags flags,
+                                          uint32_t queueIndex)
+{
+  return handle.createCommandPool({flags, queueIndex});
+}
+
+vk::CommandBuffer Device::allocateCommandBuffer(vk::CommandPool& commandPool,
+                                                vk::CommandBufferLevel level)
+{
+  return handle.allocateCommandBuffers({commandPool, level, 1}).front();
+}
+
+vk::DescriptorSetLayout Device::createDescriptorSetLayout(
+    std::vector<vk::DescriptorSetLayoutBinding>& bindings)
+{
+  return handle.createDescriptorSetLayout({{}, bindings, {}});
+}
+
+vk::DescriptorPool Device::createDescriptorPool(
+    std::vector<vk::DescriptorPoolSize>& poolSizes, uint32_t maxSets)
+{
+  return handle.createDescriptorPool({{}, maxSets, poolSizes});
+}
+
+vk::DescriptorSet Device::allocateDescriptorSet(
+    vk::DescriptorPool& descriptorPool,
+    vk::DescriptorSetLayout& descriptorSetLayout)
+{
+#if defined(ANDROID)
+  vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo(
+      descriptorPool, 1, &descriptorSetLayout);
+#else
+  vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo(descriptorPool,
+                                                          descriptorSetLayout);
+#endif
+  // TODO: why is this mutliple sets?
+  return handle.allocateDescriptorSets(descriptorSetAllocateInfo).front();
+}
+
+vk::Pipeline Device::createComputePipeline(
+    vk::PipelineShaderStageCreateInfo& stage,
+    vk::PipelineLayout& pipelineLayout,
+    vk::PipelineCache pipelineCache)
+{
+  vk::ComputePipelineCreateInfo compute_pipeline_create_info(
+      {}, stage, pipelineLayout);
+
+  vk::Result result;
+  vk::Pipeline pipeline;
+  std::tie(result, pipeline) =
+      handle.createComputePipeline(pipelineCache, compute_pipeline_create_info);
+  assert(result == vk::Result::eSuccess);
+
+  return pipeline;
 }
 
 vk::SwapchainKHR Device::createSwapchain()

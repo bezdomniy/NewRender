@@ -10,6 +10,8 @@ target_sources(renderer PRIVATE
     buffer.hpp
     shader.cpp
     shader.hpp
+    compute.cpp
+    compute.hpp
     validation.cpp
     validation.hpp
 )

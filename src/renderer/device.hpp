@@ -1,9 +1,13 @@
 #pragma once
 
-#include <memory>
 #include <optional>
 
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_enums.hpp>
+#include <vulkan/vulkan_handles.hpp>
+#include <vulkan/vulkan_structs.hpp>
+
+class Compute;
 
 class Device
 {
@@ -13,19 +17,8 @@ public:
   ~Device();
   void destroy();
 
-  vk::SwapchainKHR createSwapchain();
-  std::vector<vk::Image> getSwapchainImages(vk::SwapchainKHR swapchain);
-  std::vector<vk::ImageView> getImageViews(vk::SwapchainKHR swapchain,
-                                           std::vector<vk::Image>& images);
+  Compute createCompute();
 
-  vk::PhysicalDeviceMemoryProperties memoryProperties;
-  vk::PhysicalDevice physicalDevice {VK_NULL_HANDLE};
-  vk::Device handle {VK_NULL_HANDLE};
-  vk::Queue graphicsQueue {VK_NULL_HANDLE};
-  vk::Queue presentQueue {VK_NULL_HANDLE};
-  vk::Queue computeQueue {VK_NULL_HANDLE};
-
-private:
   struct QueueFamilyIndices
   {
     std::optional<uint32_t> graphicsFamily;
@@ -39,6 +32,38 @@ private:
     }
   };
 
+  vk::DescriptorSetLayout createDescriptorSetLayout(
+      std::vector<vk::DescriptorSetLayoutBinding>& bindings);
+  vk::DescriptorPool createDescriptorPool(
+      std::vector<vk::DescriptorPoolSize>& poolSizes, uint32_t maxSets);
+  vk::DescriptorSet allocateDescriptorSet(
+      vk::DescriptorPool& descriptorPool,
+      vk::DescriptorSetLayout& descriptorSetLayout);
+
+  vk::CommandPool createCommandPool(vk::CommandPoolCreateFlags flags,
+                                    uint32_t queueIndex);
+  vk::CommandBuffer allocateCommandBuffer(
+      vk::CommandPool& commandPool,
+      vk::CommandBufferLevel level = vk::CommandBufferLevel::ePrimary);
+
+  vk::Pipeline createComputePipeline(vk::PipelineShaderStageCreateInfo& stage,
+                                     vk::PipelineLayout& pipelineLayout,
+                                     vk::PipelineCache pipelineCache = nullptr);
+
+  vk::SwapchainKHR createSwapchain();
+  std::vector<vk::Image> getSwapchainImages(vk::SwapchainKHR swapchain);
+  std::vector<vk::ImageView> getImageViews(vk::SwapchainKHR swapchain,
+                                           std::vector<vk::Image>& images);
+
+  vk::PhysicalDeviceMemoryProperties memoryProperties;
+  vk::PhysicalDevice physicalDevice {VK_NULL_HANDLE};
+  vk::Device handle {VK_NULL_HANDLE};
+  vk::Queue graphicsQueue {VK_NULL_HANDLE};
+  vk::Queue presentQueue {VK_NULL_HANDLE};
+  vk::Queue computeQueue {VK_NULL_HANDLE};
+  QueueFamilyIndices queueFamilyIndices;
+
+private:
   struct SwapChainSupportDetails
   {
     vk::SurfaceCapabilitiesKHR capabilities;
@@ -48,7 +73,6 @@ private:
 
   vk::Instance& instance;
   vk::SurfaceKHR* surface = nullptr;
-  QueueFamilyIndices queueFamilyIndices;
 
   SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice device);
 

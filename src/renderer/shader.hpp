@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_structs.hpp>
 
 class Device;
 
@@ -14,6 +15,9 @@ public:
   ~Shader();
 
   vk::ShaderModule getShaderModule() const { return shaderModule; }
+
+  vk::PipelineShaderStageCreateInfo getShaderStageCreateInfo(
+      vk::ShaderStageFlagBits stage);
 
 private:
   Device* device;

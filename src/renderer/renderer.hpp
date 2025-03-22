@@ -6,9 +6,11 @@
 #include <vector>
 
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_handles.hpp>
 
 #include "../application/window.hpp"
 #include "buffer.hpp"
+#include "compute.hpp"
 #include "device.hpp"
 
 class Renderer
@@ -22,6 +24,8 @@ public:
                     size_t size,
                     vk::BufferUsageFlags usageFlags,
                     vk::MemoryPropertyFlags memoryFlags);
+
+  // void createComputeTask(std::string name);
   void run();
 
 private:
@@ -31,8 +35,9 @@ private:
 
   Window* window = nullptr;
   vk::SurfaceKHR surface {VK_NULL_HANDLE};
-  vk::CommandPool commandPool {VK_NULL_HANDLE};
-  std::vector<vk::CommandBuffer> commandBuffers;
+  vk::DescriptorPool descriptorPool {VK_NULL_HANDLE};
+  // vk::CommandPool commandPool {VK_NULL_HANDLE};
+  // std::vector<vk::CommandBuffer> commandBuffers;
   vk::SwapchainKHR swapchain {VK_NULL_HANDLE};
   vk::Format swapchainImageFormat;
   vk::Extent2D swapchainExtent;
@@ -41,6 +46,7 @@ private:
   std::unordered_map<std::string, Buffer> buffers;
 
   std::unique_ptr<Device> device = nullptr;
+  std::unique_ptr<Compute> compute = nullptr;
 
 #if !defined(NDEBUG)
   vk::DebugUtilsMessengerEXT debugUtilsMessenger {VK_NULL_HANDLE};
