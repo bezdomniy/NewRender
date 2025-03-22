@@ -5,6 +5,7 @@
 
 #include <fmt/base.h>
 
+#include "shader.hpp"
 #include "validation.hpp"
 
 #if VULKAN_HPP_DISPATCH_LOADER_DYNAMIC == 1
@@ -48,6 +49,9 @@ void Renderer::initVulkan()
 
   // device = std::make_unique<Device>(instance);
   device = std::make_unique<Device>(instance, &surface);
+
+  std::string shaderPath = "src/shaders/bin/hello-world.slang.spv";
+  auto helloWorldShader = std::make_unique<Shader>(device.get(), shaderPath);
 
   swapchain = device->createSwapchain();
   images = device->getSwapchainImages(swapchain);

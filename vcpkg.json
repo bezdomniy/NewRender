@@ -3,7 +3,7 @@
     "fmt",
     "glfw3",
     "glm",
-    "vulkan",
-    "imgui"
+    "imgui",
+    "vulkan"
   ]
 }
