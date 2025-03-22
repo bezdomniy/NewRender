@@ -216,6 +216,10 @@ void Renderer::render()
   void* mapped =
       device->handle.mapMemory(buffers.at("result").memory, 0, vk::WholeSize);
 
+  vk::MappedMemoryRange mappedRange(buffers.at("result").memory);
+  device->handle.flushMappedMemoryRanges(mappedRange);
+  device->handle.invalidateMappedMemoryRanges({{mappedRange}});
+
   memcpy(result.data(), mapped, result.size() * sizeof(float));
 
   device->handle.unmapMemory(buffers.at("result").memory);

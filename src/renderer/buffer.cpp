@@ -2,6 +2,8 @@
 
 #include "buffer.hpp"
 
+#include <vulkan/vulkan_enums.hpp>
+
 Buffer::Buffer(vk::Device& device,
                vk::PhysicalDeviceMemoryProperties memoryProperties,
                void* data,
@@ -11,8 +13,8 @@ Buffer::Buffer(vk::Device& device,
     : device(device)
 {
   try {
-    auto bufferCreateInfo =
-        vk::BufferCreateInfo(vk::BufferCreateFlags(), size, usageFlags);
+    auto bufferCreateInfo = vk::BufferCreateInfo(
+        vk::BufferCreateFlags(), size, usageFlags, vk::SharingMode::eExclusive);
 
     handle = device.createBuffer(bufferCreateInfo);
 
