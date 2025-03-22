@@ -20,10 +20,15 @@ public:
   ~Renderer();
 
   void createBuffer(std::string name,
-                    void* data,
-                    size_t size,
                     vk::BufferUsageFlags usageFlags,
-                    vk::MemoryPropertyFlags memoryFlags);
+                    vk::MemoryPropertyFlags memoryFlags,
+                    size_t size,
+                    void* data = nullptr);
+
+  Buffer createBuffer(vk::BufferUsageFlags usageFlags,
+                      vk::MemoryPropertyFlags memoryFlags,
+                      size_t size,
+                      void* data = nullptr);
 
   // void createComputeTask(std::string name);
   void run();

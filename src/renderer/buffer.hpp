@@ -10,10 +10,10 @@ class Buffer
 public:
   Buffer(vk::Device& device,
          vk::PhysicalDeviceMemoryProperties memoryProperties,
-         void* data,
+         vk::BufferUsageFlags usageFlags,
+         vk::MemoryPropertyFlags memoryFlags,
          size_t size,
-         vk::BufferUsageFlags flags,
-         vk::MemoryPropertyFlags memoryFlags);
+         void* data = nullptr);
   ~Buffer();
 
   vk::Buffer handle {VK_NULL_HANDLE};

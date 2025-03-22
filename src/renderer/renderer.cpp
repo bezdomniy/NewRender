@@ -34,19 +34,32 @@ void Renderer::run()
 }
 
 void Renderer::createBuffer(std::string name,
-                            void* data,
-                            size_t size,
                             vk::BufferUsageFlags usageFlags,
-                            vk::MemoryPropertyFlags memoryFlags)
+                            vk::MemoryPropertyFlags memoryFlags,
+                            size_t size,
+                            void* data)
 {
   // TODO: copy from staging buffer to storage buffer
   buffers.try_emplace(name,
                       device->handle,
                       device->memoryProperties,
-                      data,
-                      size,
                       usageFlags,
-                      memoryFlags);
+                      memoryFlags,
+                      size,
+                      data);
+};
+
+Buffer Renderer::createBuffer(vk::BufferUsageFlags usageFlags,
+                              vk::MemoryPropertyFlags memoryFlags,
+                              size_t size,
+                              void* data)
+{
+  return Buffer(device->handle,
+                device->memoryProperties,
+                usageFlags,
+                memoryFlags,
+                size,
+                data);
 };
 
 void Renderer::initVulkan()
@@ -97,7 +110,8 @@ void Renderer::render()
       device->handle.createPipelineLayout({{}, compute->descriptorSetLayout});
 
   compute->commandPool = device->createCommandPool(
-      {}, device->queueFamilyIndices.computeFamily.value());
+      {vk::CommandPoolCreateFlagBits::eResetCommandBuffer},
+      device->queueFamilyIndices.computeFamily.value());
 
   compute->commandBuffer = device->allocateCommandBuffer(compute->commandPool);
 
@@ -105,23 +119,39 @@ void Renderer::render()
   std::vector<float> buffer1 {2, 3, 4};
   std::vector<float> result {0, 0, 0};
   createBuffer("buffer0",
-               buffer0.data(),
+               vk::BufferUsageFlagBits::eStorageBuffer,
+               vk::MemoryPropertyFlagBits::eHostVisible
+                   | vk::MemoryPropertyFlagBits::eHostCoherent,
                buffer0.size() * sizeof(float),
-               vk::BufferUsageFlagBits::eStorageBuffer,
-               vk::MemoryPropertyFlagBits::eHostVisible
-                   | vk::MemoryPropertyFlagBits::eHostCoherent);
+               buffer0.data());
   createBuffer("buffer1",
-               buffer1.data(),
+               vk::BufferUsageFlagBits::eStorageBuffer,
+               vk::MemoryPropertyFlagBits::eHostVisible
+                   | vk::MemoryPropertyFlagBits::eHostCoherent,
                buffer1.size() * sizeof(float),
-               vk::BufferUsageFlagBits::eStorageBuffer,
-               vk::MemoryPropertyFlagBits::eHostVisible
-                   | vk::MemoryPropertyFlagBits::eHostCoherent);
+               buffer1.data());
+  auto resultStaging = createBuffer(vk::BufferUsageFlagBits::eTransferSrc
+                                        | vk::BufferUsageFlagBits::eTransferDst,
+                                    vk::MemoryPropertyFlagBits::eHostVisible,
+                                    result.size() * sizeof(float),
+                                    result.data());
+
   createBuffer("result",
-               result.data(),
-               result.size() * sizeof(float),
-               vk::BufferUsageFlagBits::eStorageBuffer,
-               vk::MemoryPropertyFlagBits::eHostVisible
-                   | vk::MemoryPropertyFlagBits::eHostCoherent);
+               vk::BufferUsageFlagBits::eStorageBuffer
+                   | vk::BufferUsageFlagBits::eTransferSrc
+                   | vk::BufferUsageFlagBits::eTransferDst,
+               vk::MemoryPropertyFlagBits::eDeviceLocal,
+               result.size() * sizeof(float));
+
+  compute->commandBuffer.begin(vk::CommandBufferBeginInfo());
+  compute->commandBuffer.copyBuffer(resultStaging.handle,
+                                    buffers.at("result").handle,
+                                    {{0, 0, result.size() * sizeof(float)}});
+  // No barrier because using the same queue for now
+  compute->commandBuffer.end();
+  vk::SubmitInfo si({}, {}, compute->commandBuffer);
+  compute->queue.submit(si);
+  compute->queue.waitIdle();
 
   vk::DescriptorBufferInfo buffer0Descriptor(
       buffers.at("buffer0").handle, 0, VK_WHOLE_SIZE);
@@ -165,6 +195,24 @@ void Renderer::render()
 
   compute->commandBuffer.begin(vk::CommandBufferBeginInfo());
 
+  // Barrier to ensure that input buffer transfer is finished before compute
+  // shader reads from it
+  vk::BufferMemoryBarrier bufferBarrier {};
+  bufferBarrier.buffer = buffers.at("result").handle;
+  bufferBarrier.size = vk::WholeSize;
+  bufferBarrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
+  bufferBarrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+  bufferBarrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
+  bufferBarrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
+
+  compute->commandBuffer.pipelineBarrier(
+      vk::PipelineStageFlagBits::eHost,
+      vk::PipelineStageFlagBits::eComputeShader,
+      {},
+      nullptr,
+      bufferBarrier,
+      nullptr);
+
   compute->commandBuffer.bindPipeline(vk::PipelineBindPoint::eCompute,
                                       compute->pipelines.at("compute1"));
 
@@ -176,7 +224,8 @@ void Renderer::render()
 
   compute->commandBuffer.dispatch(1, 1, 1);
 
-  vk::BufferMemoryBarrier bufferBarrier {};
+  // Barrier to ensure that shader writes are finished before buffer is read
+  // back from GPU
   bufferBarrier.buffer = buffers.at("result").handle;
   bufferBarrier.size = vk::WholeSize;
   bufferBarrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
@@ -192,21 +241,26 @@ void Renderer::render()
       bufferBarrier,
       nullptr);
 
-  // // TODO: copy to host
+  // copy to host
+  compute->commandBuffer.copyBuffer(buffers.at("result").handle,
+                                    resultStaging.handle,
+                                    {{0, 0, result.size() * sizeof(float)}});
 
-  // bufferBarrier.buffer = buffers.at("result").handle;
-  // bufferBarrier.size = vk::WholeSize;
-  // bufferBarrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-  // bufferBarrier.dstAccessMask = vk::AccessFlagBits::eHostRead;
-  // bufferBarrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
-  // bufferBarrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
+  // Barrier to ensure that buffer copy is finished before host reading from it
+  bufferBarrier.buffer = resultStaging.handle;
+  bufferBarrier.size = vk::WholeSize;
+  bufferBarrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+  bufferBarrier.dstAccessMask = vk::AccessFlagBits::eHostRead;
+  bufferBarrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
+  bufferBarrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
 
-  // compute->commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
-  //                                        vk::PipelineStageFlagBits::eHost,
-  //                                        {},
-  //                                        nullptr,
-  //                                        bufferBarrier,
-  //                                        nullptr);
+  compute->commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+                                         vk::PipelineStageFlagBits::eHost,
+                                         {},
+                                         nullptr,
+                                         bufferBarrier,
+                                         nullptr);
+
   compute->commandBuffer.end();
 
   vk::SubmitInfo submitInfo({}, {}, compute->commandBuffer);
@@ -214,15 +268,16 @@ void Renderer::render()
 
   // Make device writes visible to the host
   void* mapped =
-      device->handle.mapMemory(buffers.at("result").memory, 0, vk::WholeSize);
+      device->handle.mapMemory(resultStaging.memory, 0, vk::WholeSize);
 
-  vk::MappedMemoryRange mappedRange(buffers.at("result").memory);
+  vk::MappedMemoryRange mappedRange(resultStaging.memory);
   device->handle.flushMappedMemoryRanges(mappedRange);
   device->handle.invalidateMappedMemoryRanges({{mappedRange}});
 
   memcpy(result.data(), mapped, result.size() * sizeof(float));
 
-  device->handle.unmapMemory(buffers.at("result").memory);
+  device->handle.unmapMemory(resultStaging.memory);
+  compute->queue.waitIdle();
 
   fmt::print("Result: {}\n", fmt::join(result, ", "));
 }

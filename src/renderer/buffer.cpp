@@ -6,10 +6,10 @@
 
 Buffer::Buffer(vk::Device& device,
                vk::PhysicalDeviceMemoryProperties memoryProperties,
-               void* data,
-               size_t size,
                vk::BufferUsageFlags usageFlags,
-               vk::MemoryPropertyFlags memoryFlags)
+               vk::MemoryPropertyFlags memoryFlags,
+               size_t size,
+               void* data)
     : device(device)
 {
   try {
@@ -25,10 +25,12 @@ Buffer::Buffer(vk::Device& device,
     memory = device.allocateMemory(
         vk::MemoryAllocateInfo(memoryRequirements.size, typeIndex));
 
-    uint8_t* pData = static_cast<uint8_t*>(
-        device.mapMemory(memory, 0, memoryRequirements.size));
-    memcpy(pData, data, size);
-    device.unmapMemory(memory);
+    if (data != nullptr) {
+      uint8_t* pData = static_cast<uint8_t*>(
+          device.mapMemory(memory, 0, memoryRequirements.size));
+      memcpy(pData, data, size);
+      device.unmapMemory(memory);
+    }
 
     device.bindBufferMemory(handle, memory, 0);
   } catch (vk::SystemError& err) {
