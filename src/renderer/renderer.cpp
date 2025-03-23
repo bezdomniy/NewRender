@@ -190,6 +190,8 @@ void Renderer::render()
   auto stage = helloWorldShader->getShaderStageCreateInfo(
       vk::ShaderStageFlagBits::eCompute);
 
+  auto fence = device->handle.createFence({});
+
   compute->pipelines["compute1"] =
       device->createComputePipeline(stage, compute->pipelineLayout);
 
@@ -263,10 +265,17 @@ void Renderer::render()
 
   compute->commandBuffer.end();
 
+  device->handle.resetFences(fence);
   vk::SubmitInfo submitInfo({}, {}, compute->commandBuffer);
-  compute->queue.submit(submitInfo);
+  compute->queue.submit(submitInfo, fence);
 
-  compute->queue.waitIdle();
+  if (device->handle.waitForFences(fence, vk::True, UINT64_MAX)
+      != vk::Result::eSuccess)
+  {
+    throw std::runtime_error("Failed to wait for fence.");
+  }
+
+  device->handle.destroyFence(fence);
 
   // Make device writes visible to the host
   void* mapped =
