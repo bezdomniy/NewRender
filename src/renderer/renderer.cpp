@@ -117,7 +117,7 @@ void Renderer::render()
 
   std::vector<float> buffer0 {1, 2, 3};
   std::vector<float> buffer1 {2, 3, 4};
-  std::vector<float> result {0, 0, 0};
+  std::vector<float> result {0, 99, 0};
   createBuffer("buffer0",
                vk::BufferUsageFlagBits::eStorageBuffer,
                vk::MemoryPropertyFlagBits::eHostVisible
@@ -222,7 +222,7 @@ void Renderer::render()
                                             compute->descriptorSet,
                                             {});
 
-  compute->commandBuffer.dispatch(1, 1, 1);
+  compute->commandBuffer.dispatch(result.size(), 1, 1);
 
   // Barrier to ensure that shader writes are finished before buffer is read
   // back from GPU
@@ -265,6 +265,8 @@ void Renderer::render()
 
   vk::SubmitInfo submitInfo({}, {}, compute->commandBuffer);
   compute->queue.submit(submitInfo);
+
+  compute->queue.waitIdle();
 
   // Make device writes visible to the host
   void* mapped =
