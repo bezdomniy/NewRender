@@ -26,10 +26,12 @@ public:
       std::string name,
       size_t size = 0,
       void* data = nullptr,
-      vk::BufferUsageFlags usageFlags = vk::BufferUsageFlagBits::eStorageBuffer,
+      vk::BufferUsageFlags usageFlags = vk::BufferUsageFlagBits::eTransferSrc
+          | vk::BufferUsageFlagBits::eTransferDst,
       VmaMemoryUsage memoryUsage = VMA_MEMORY_USAGE_AUTO,
       VmaAllocationCreateFlags flags =
-          VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
+          VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
+          | VMA_ALLOCATION_CREATE_MAPPED_BIT);
 
   DeviceBuffer& createDeviceBuffer(
       std::string name,

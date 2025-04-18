@@ -130,28 +130,35 @@ void Renderer::render()
   std::vector<float> buffer1 {2, 3, 4};
   std::vector<float> result {0, 99, 0};
 
-  auto hostBuffer0 = createHostBuffer("buffer0",
-                                      buffer0.size() * sizeof(float),
-                                      buffer0.data(),
-                                      vk::BufferUsageFlagBits::eTransferSrc);
-  auto hostBuffer1 = createHostBuffer("buffer1",
-                                      buffer1.size() * sizeof(float),
-                                      buffer1.data(),
-                                      vk::BufferUsageFlagBits::eTransferSrc);
-  auto hostResultBuffer = createHostBuffer(
-      "result", buffer1.size() * sizeof(float), buffer1.data());
+  HostBuffer& hostBuffer0 =
+      createHostBuffer("buffer0",
+                       buffer0.size() * sizeof(float),
+                       buffer0.data(),
+                       vk::BufferUsageFlagBits::eTransferSrc);
 
-  auto deviceBuffer0 =
+  HostBuffer& hostBuffer1 =
+      createHostBuffer("buffer1",
+                       buffer1.size() * sizeof(float),
+                       buffer1.data(),
+                       vk::BufferUsageFlagBits::eTransferSrc);
+
+  HostBuffer& hostResultBuffer =
+      createHostBuffer("result",
+                       buffer1.size() * sizeof(float),
+                       buffer1.data(),
+                       vk::BufferUsageFlagBits::eTransferDst);
+
+  DeviceBuffer& deviceBuffer0 =
       createDeviceBuffer("buffer0",
                          buffer0.size() * sizeof(float),
                          vk::BufferUsageFlagBits::eStorageBuffer
                              | vk::BufferUsageFlagBits::eTransferDst);
-  auto deviceBuffer1 =
+  DeviceBuffer& deviceBuffer1 =
       createDeviceBuffer("buffer1",
                          buffer1.size() * sizeof(float),
                          vk::BufferUsageFlagBits::eStorageBuffer
                              | vk::BufferUsageFlagBits::eTransferDst);
-  auto deviceResultBuffer =
+  DeviceBuffer& deviceResultBuffer =
       createDeviceBuffer("result",
                          result.size() * sizeof(float),
                          vk::BufferUsageFlagBits::eStorageBuffer
@@ -159,17 +166,30 @@ void Renderer::render()
                              | vk::BufferUsageFlagBits::eTransferDst);
 
   compute->commandBuffer.begin(vk::CommandBufferBeginInfo());
-  compute->commandBuffer.copyBuffer(hostResultBuffer.handle,
-                                    deviceResultBuffer.handle,
-                                    {{0, 0, result.size() * sizeof(float)}});
+
   compute->commandBuffer.copyBuffer(hostBuffer0.handle,
                                     deviceBuffer0.handle,
                                     {{0, 0, buffer0.size() * sizeof(float)}});
   compute->commandBuffer.copyBuffer(hostBuffer1.handle,
                                     deviceBuffer1.handle,
                                     {{0, 0, buffer1.size() * sizeof(float)}});
+
+  vk::MemoryBarrier memoryBarrier;
+  memoryBarrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+  memoryBarrier.dstAccessMask =
+      vk::AccessFlagBits::eShaderRead;  // Access by compute shader
+
+  compute->commandBuffer.pipelineBarrier(
+      vk::PipelineStageFlagBits::eTransfer,  // Src stage mask
+      vk::PipelineStageFlagBits::eComputeShader,  // Dst stage mask
+      {},  // Dependency flags
+      memoryBarrier,  // Memory barriers
+      nullptr,  // Buffer memory barriers (could use instead of memory barrier)
+      nullptr);  // Image memory barriers
+
   // No barrier because using the same queue for now
   compute->commandBuffer.end();
+
   vk::SubmitInfo si({}, {}, compute->commandBuffer);
   compute->queue.submit(si);
   compute->queue.waitIdle();
@@ -298,17 +318,14 @@ void Renderer::render()
 
   device->handle.destroyFence(fence);
 
-  // // Make device writes visible to the host
-  // void* mapped =
-  //     device->handle.mapMemory(hostResultBuffer.memory, 0, vk::WholeSize);
+  vmaFlushAllocation(allocator, hostResultBuffer.allocation, 0, vk::WholeSize);
+  vmaInvalidateAllocation(
+      allocator, hostResultBuffer.allocation, 0, vk::WholeSize);
 
-  // vk::MappedMemoryRange mappedRange(hostResultBuffer.memory);
-  // device->handle.flushMappedMemoryRanges(mappedRange);
-  // device->handle.invalidateMappedMemoryRanges({{mappedRange}});
+  memcpy(result.data(),
+         hostResultBuffer.allocInfo.pMappedData,
+         result.size() * sizeof(float));
 
-  // memcpy(result.data(), mapped, result.size() * sizeof(float));
-
-  // device->handle.unmapMemory(hostResultBuffer.memory);
   compute->queue.waitIdle();
 
   fmt::print("Result: {}\n", fmt::join(result, ", "));

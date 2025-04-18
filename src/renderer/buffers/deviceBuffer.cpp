@@ -27,12 +27,11 @@ DeviceBuffer::DeviceBuffer(vk::Device& device,
 
     auto rawBufferCreateInfo =
         static_cast<VkBufferCreateInfo>(bufferCreateInfo);
-    auto rawHandle = static_cast<VkBuffer>(handle);
 
     vmaCreateBuffer(allocator,
                     &rawBufferCreateInfo,
                     &allocCreateInfo,
-                    &rawHandle,
+                    &handle,
                     &allocation,
                     &allocInfo);
 

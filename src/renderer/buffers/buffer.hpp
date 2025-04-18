@@ -8,13 +8,18 @@ class Buffer
 {
 public:
   Buffer(vk::Device& device, VmaAllocator& allocator);
-  ~Buffer();
+  virtual ~Buffer();
 
-  vk::Buffer handle {VK_NULL_HANDLE};
-  VmaAllocation allocation;
-  VmaAllocationInfo allocInfo;
+  Buffer(const Buffer&) = delete;  // Disable copy constructor
+  Buffer& operator=(const Buffer&) = delete;  // Disable copy assignment
+  Buffer(Buffer&&) = delete;  // Disable move constructor
+  Buffer& operator=(Buffer&&) = delete;  // Disable move assignment
 
-private:
+  VkBuffer handle {VK_NULL_HANDLE};
+  VmaAllocation allocation = VK_NULL_HANDLE;
+  VmaAllocationInfo allocInfo = {};
+
+protected:
   vk::Device& device;
   VmaAllocator& allocator;
 };

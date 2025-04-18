@@ -23,5 +23,10 @@ public:
           VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
           | VMA_ALLOCATION_CREATE_MAPPED_BIT);
 
+  HostBuffer(const HostBuffer&) = delete;
+  HostBuffer& operator=(const HostBuffer&) = delete;
+  HostBuffer(HostBuffer&&) = delete;
+  HostBuffer& operator=(HostBuffer&&) = delete;
+
 private:
 };

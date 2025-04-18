@@ -19,5 +19,10 @@ public:
       VmaAllocationCreateFlags flags =
           VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
 
+  DeviceBuffer(const DeviceBuffer&) = delete;
+  DeviceBuffer& operator=(const DeviceBuffer&) = delete;
+  DeviceBuffer(DeviceBuffer&&) = delete;
+  DeviceBuffer& operator=(DeviceBuffer&&) = delete;
+
 private:
 };

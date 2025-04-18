@@ -29,12 +29,11 @@ HostBuffer::HostBuffer(vk::Device& device,
 
     auto rawBufferCreateInfo =
         static_cast<VkBufferCreateInfo>(bufferCreateInfo);
-    auto rawHandle = static_cast<VkBuffer>(handle);
 
     VkResult result = vmaCreateBuffer(allocator,
                                       &rawBufferCreateInfo,
                                       &allocCreateInfo,
-                                      &rawHandle,
+                                      &handle,
                                       &allocation,
                                       &allocInfo);
 
@@ -42,7 +41,7 @@ HostBuffer::HostBuffer(vk::Device& device,
       throw std::runtime_error("Failed to create host buffer.");
     }
 
-    memcpy(allocInfo.pMappedData, data, size);
+    vmaCopyMemoryToAllocation(allocator, data, allocation, 0, size);
 
   } catch (vk::SystemError& err) {
     std::cout << "vk::SystemError: " << err.what() << std::endl;

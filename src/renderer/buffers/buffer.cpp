@@ -11,6 +11,7 @@ Buffer::Buffer(vk::Device& device, VmaAllocator& allocator)
 
 Buffer::~Buffer()
 {
-  auto rawHandle = static_cast<VkBuffer>(handle);
-  vmaDestroyBuffer(allocator, rawHandle, allocation);
+  vmaDestroyBuffer(allocator, handle, allocation);
+  handle = VK_NULL_HANDLE;
+  allocation = VK_NULL_HANDLE;
 };
