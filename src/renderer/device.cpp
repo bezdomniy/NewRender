@@ -7,8 +7,6 @@
 #include <vulkan/vulkan_handles.hpp>
 #include <vulkan/vulkan_structs.hpp>
 
-#include "compute.hpp"
-
 Device::Device(vk::Instance& instance)
     : instance(instance)
 {
@@ -200,20 +198,15 @@ std::vector<vk::Image> Device::getSwapchainImages(vk::SwapchainKHR swapchain)
   return handle.getSwapchainImagesKHR(swapchain);
 }
 
-std::vector<vk::ImageView> Device::getImageViews(vk::SwapchainKHR swapchain,
-                                                 std::vector<vk::Image>& images)
+std::vector<vk::ImageView> Device::getImageViews(std::vector<vk::Image>& images)
 {
   SwapChainSupportDetails swapChainSupport =
       querySwapChainSupport(physicalDevice);
 
   vk::SurfaceFormatKHR surfaceFormat =
       chooseSwapSurfaceFormat(swapChainSupport.formats);
-  vk::PresentModeKHR presentMode =
-      chooseSwapPresentMode(swapChainSupport.presentModes);
-  vk::Extent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
 
   auto swapchainImageFormat = surfaceFormat.format;
-  auto swapchainExtent = extent;
 
   std::vector<vk::ImageView> imagesViews;
   imagesViews.resize(images.size());
@@ -344,7 +337,7 @@ Device::QueueFamilyIndices Device::findQueueFamilies(vk::PhysicalDevice device,
   std::vector<vk::QueueFamilyProperties> queueFamilies(queueFamilyCount);
   device.getQueueFamilyProperties(&queueFamilyCount, queueFamilies.data());
 
-  int i = 0;
+  uint32_t i = 0;
   for (const auto& queueFamily : queueFamilies) {
     if (queueFamily.queueFlags & vk::QueueFlagBits::eCompute) {
       indices.computeFamily = i;

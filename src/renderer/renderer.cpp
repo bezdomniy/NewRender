@@ -21,8 +21,8 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 #endif
 
 Renderer::Renderer(std::string name, Window* window)
-    : window(window)
-    , appName(name) {};
+    : appName(name)
+    , window(window) {};
 
 Renderer::~Renderer()
 {
@@ -83,7 +83,7 @@ void Renderer::initVulkan()
 
   swapchain = device->createSwapchain();
   images = device->getSwapchainImages(swapchain);
-  imagesViews = device->getImageViews(swapchain, images);
+  imagesViews = device->getImageViews(images);
 }
 
 void Renderer::render()
@@ -265,7 +265,7 @@ void Renderer::render()
                                             compute->descriptorSet,
                                             {});
 
-  compute->commandBuffer.dispatch(result.size(), 1, 1);
+  compute->commandBuffer.dispatch((uint32_t)result.size(), 1, 1);
 
   // Barrier to ensure that shader writes are finished before buffer is read
   // back from GPU

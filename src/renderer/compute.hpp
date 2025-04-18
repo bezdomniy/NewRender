@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <memory>
 #include <unordered_map>
 
 #include <vulkan/vulkan.hpp>
@@ -24,7 +23,7 @@ public:
   vk::PipelineLayout pipelineLayout;  // Layout of the compute pipeline
   vk::Queue queue;  // Separate queue for compute commands (queue family may
                     // differ from the one used for graphics)
-  uint32_t queueFamilyIndex = ~0;
+  uint32_t queueFamilyIndex = 0;
   // vk::Semaphore
   //     semaphore;  // Execution dependency between compute & graphic
   //     submission

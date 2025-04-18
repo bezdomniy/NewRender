@@ -52,8 +52,7 @@ public:
 
   vk::SwapchainKHR createSwapchain();
   std::vector<vk::Image> getSwapchainImages(vk::SwapchainKHR swapchain);
-  std::vector<vk::ImageView> getImageViews(vk::SwapchainKHR swapchain,
-                                           std::vector<vk::Image>& images);
+  std::vector<vk::ImageView> getImageViews(std::vector<vk::Image>& images);
 
   vk::PhysicalDeviceMemoryProperties memoryProperties;
   vk::PhysicalDevice physicalDevice {VK_NULL_HANDLE};

@@ -17,8 +17,8 @@ Window::Window(std::string name, uint32_t width, uint32_t height)
   // glfwSetErrorCallback(error_callback);
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-  handle = glfwCreateWindow(properties.extent.width,
-                            properties.extent.height,
+  handle = glfwCreateWindow((int)properties.extent.width,
+                            (int)properties.extent.height,
                             properties.title.c_str(),
                             nullptr,
                             nullptr);

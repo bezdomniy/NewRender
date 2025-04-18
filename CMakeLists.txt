@@ -20,6 +20,8 @@ find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 # Fetch Slang binaries
 include(cmake/FetchSlang.cmake)
 
+include(cmake/openssf.cmake)
+
 add_executable(app)
 target_sources(app PRIVATE src/main.cpp)
 target_include_directories(app PRIVATE "${PROJECT_SOURCE_DIR}")
