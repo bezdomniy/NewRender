@@ -1,8 +1,10 @@
 
 #include <iostream>
+#include <stdexcept>
 
 #include "hostBuffer.hpp"
 
+#include <vulkan/vulkan_core.h>
 #include <vulkan/vulkan_enums.hpp>
 #include <vulkan/vulkan_structs.hpp>
 
@@ -29,19 +31,19 @@ HostBuffer::HostBuffer(vk::Device& device,
         static_cast<VkBufferCreateInfo>(bufferCreateInfo);
     auto rawHandle = static_cast<VkBuffer>(handle);
 
-    vmaCreateBuffer(allocator,
-                    &rawBufferCreateInfo,
-                    &allocCreateInfo,
-                    &rawHandle,
-                    &allocation,
-                    &allocInfo);
+    VkResult result = vmaCreateBuffer(allocator,
+                                      &rawBufferCreateInfo,
+                                      &allocCreateInfo,
+                                      &rawHandle,
+                                      &allocation,
+                                      &allocInfo);
 
-    // uint8_t* pData = static_cast<uint8_t*>(
-    //     device.mapMemory(memory, 0, memoryRequirements.size));
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("Failed to create host buffer.");
+    }
+
     memcpy(allocInfo.pMappedData, data, size);
-    // device.unmapMemory(memory);
 
-    // device.bindBufferMemory(handle, allocInfo.deviceMemory, 0);
   } catch (vk::SystemError& err) {
     std::cout << "vk::SystemError: " << err.what() << std::endl;
     exit(-1);

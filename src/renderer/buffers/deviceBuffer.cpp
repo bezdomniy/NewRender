@@ -23,6 +23,7 @@ DeviceBuffer::DeviceBuffer(vk::Device& device,
     VmaAllocationCreateInfo allocCreateInfo = {};
     allocCreateInfo.usage = memoryUsage;
     allocCreateInfo.flags = flags;
+    allocCreateInfo.priority = 1.0f;
 
     auto rawBufferCreateInfo =
         static_cast<VkBufferCreateInfo>(bufferCreateInfo);

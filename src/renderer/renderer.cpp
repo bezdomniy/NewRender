@@ -130,21 +130,27 @@ void Renderer::render()
   std::vector<float> buffer1 {2, 3, 4};
   std::vector<float> result {0, 99, 0};
 
-  auto hostBuffer1 = createHostBuffer("buffer0",
+  auto hostBuffer0 = createHostBuffer("buffer0",
                                       buffer0.size() * sizeof(float),
                                       buffer0.data(),
                                       vk::BufferUsageFlagBits::eTransferSrc);
-  auto hostBuffer2 = createHostBuffer("buffer1",
+  auto hostBuffer1 = createHostBuffer("buffer1",
                                       buffer1.size() * sizeof(float),
                                       buffer1.data(),
                                       vk::BufferUsageFlagBits::eTransferSrc);
   auto hostResultBuffer = createHostBuffer(
       "result", buffer1.size() * sizeof(float), buffer1.data());
 
+  auto deviceBuffer0 =
+      createDeviceBuffer("buffer0",
+                         buffer0.size() * sizeof(float),
+                         vk::BufferUsageFlagBits::eStorageBuffer
+                             | vk::BufferUsageFlagBits::eTransferDst);
   auto deviceBuffer1 =
-      createDeviceBuffer("buffer0", buffer0.size() * sizeof(float));
-  auto deviceBuffer2 =
-      createDeviceBuffer("buffer1", buffer1.size() * sizeof(float));
+      createDeviceBuffer("buffer1",
+                         buffer1.size() * sizeof(float),
+                         vk::BufferUsageFlagBits::eStorageBuffer
+                             | vk::BufferUsageFlagBits::eTransferDst);
   auto deviceResultBuffer =
       createDeviceBuffer("result",
                          result.size() * sizeof(float),
@@ -156,11 +162,11 @@ void Renderer::render()
   compute->commandBuffer.copyBuffer(hostResultBuffer.handle,
                                     deviceResultBuffer.handle,
                                     {{0, 0, result.size() * sizeof(float)}});
+  compute->commandBuffer.copyBuffer(hostBuffer0.handle,
+                                    deviceBuffer0.handle,
+                                    {{0, 0, buffer0.size() * sizeof(float)}});
   compute->commandBuffer.copyBuffer(hostBuffer1.handle,
                                     deviceBuffer1.handle,
-                                    {{0, 0, buffer0.size() * sizeof(float)}});
-  compute->commandBuffer.copyBuffer(hostBuffer2.handle,
-                                    deviceBuffer2.handle,
                                     {{0, 0, buffer1.size() * sizeof(float)}});
   // No barrier because using the same queue for now
   compute->commandBuffer.end();
@@ -169,9 +175,9 @@ void Renderer::render()
   compute->queue.waitIdle();
 
   vk::DescriptorBufferInfo buffer0Descriptor(
-      deviceBuffer1.handle, 0, VK_WHOLE_SIZE);
+      deviceBuffer0.handle, 0, VK_WHOLE_SIZE);
   vk::DescriptorBufferInfo buffer1Descriptor(
-      deviceBuffer2.handle, 0, VK_WHOLE_SIZE);
+      deviceBuffer1.handle, 0, VK_WHOLE_SIZE);
   vk::DescriptorBufferInfo resultDescriptor(
       deviceResultBuffer.handle, 0, VK_WHOLE_SIZE);
 
