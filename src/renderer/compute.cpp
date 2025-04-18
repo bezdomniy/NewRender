@@ -14,8 +14,8 @@ Compute::~Compute()
 
 void Compute::destroy()
 {
-  storageBuffer.reset();
-  uniformBuffer.reset();
+  // storageBuffer.reset();
+  // uniformBuffer.reset();
 
   for (auto& pipeline : pipelines) {
     device.destroyPipeline(pipeline.second);

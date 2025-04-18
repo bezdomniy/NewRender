@@ -4,6 +4,7 @@
     "glfw3",
     "glm",
     "imgui",
-    "vulkan"
+    "vulkan",
+    "vulkan-memory-allocator"
   ]
 }

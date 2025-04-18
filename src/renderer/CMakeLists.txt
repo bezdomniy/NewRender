@@ -6,8 +6,12 @@ target_sources(renderer PRIVATE
     renderer.hpp
     device.cpp
     device.hpp
-    buffer.cpp
-    buffer.hpp
+    buffers/buffer.cpp
+    buffers/buffer.hpp
+    buffers/hostBuffer.cpp
+    buffers/hostBuffer.hpp
+    buffers/deviceBuffer.cpp
+    buffers/deviceBuffer.hpp
     shader.cpp
     shader.hpp
     compute.cpp
@@ -23,6 +27,7 @@ target_compile_definitions(renderer PUBLIC VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1)
 # Link the 'renderer' library with its dependencies
 target_link_libraries(renderer PRIVATE
     Vulkan::Vulkan
+    GPUOpen::VulkanMemoryAllocator
     glm::glm
     glfw
     imgui::imgui

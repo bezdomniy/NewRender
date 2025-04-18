@@ -6,7 +6,7 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "buffer.hpp"
+// #include "buffers/buffer.hpp"
 
 class Compute
 {
@@ -29,11 +29,11 @@ public:
   //     semaphore;  // Execution dependency between compute & graphic
   //     submission
   uint32_t sharedDataSize = 1024;
-  std::unique_ptr<Buffer> storageBuffer;  // (Shader) storage buffer object
-                                          // containing the particles
-  //   ComputeUBO ubo;
-  std::unique_ptr<Buffer> uniformBuffer;  // Uniform buffer object containing
-                                          // particle system parameters
+  // std::unique_ptr<Buffer> storageBuffer;  // (Shader) storage buffer object
+  //                                         // containing the particles
+  // //   ComputeUBO ubo;
+  // std::unique_ptr<Buffer> uniformBuffer;  // Uniform buffer object containing
+  //                                         // particle system parameters
   uint32_t work_group_size = 128;
 
 private:
