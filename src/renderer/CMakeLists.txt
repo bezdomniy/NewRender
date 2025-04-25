@@ -16,6 +16,10 @@ target_sources(renderer PRIVATE
     shader.hpp
     compute.cpp
     compute.hpp
+    graphics.cpp
+    graphics.hpp
+    executor.cpp
+    executor.hpp
     validation.cpp
     validation.hpp
 )

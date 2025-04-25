@@ -88,8 +88,13 @@ void Renderer::initVulkan()
 
 void Renderer::render()
 {
-  compute = std::make_unique<Compute>(device->handle);
-  compute->queue = device->computeQueue;
+  std::vector<vk::DescriptorPoolSize> descriptorPoolSizes = {
+      {vk::DescriptorPoolSize {vk::DescriptorType::eUniformBuffer, 2},
+       vk::DescriptorPoolSize {vk::DescriptorType::eStorageBuffer, 3},
+       vk::DescriptorPoolSize {vk::DescriptorType::eCombinedImageSampler, 2}}};
+
+  descriptorPool = device->createDescriptorPool(descriptorPoolSizes, 1);
+
   std::vector<vk::DescriptorSetLayoutBinding> descriptorSetLayoutBindings = {
       vk::DescriptorSetLayoutBinding {0,
                                       vk::DescriptorType::eStorageBuffer,
@@ -104,27 +109,11 @@ void Renderer::render()
                                       1,
                                       vk::ShaderStageFlagBits::eCompute}};
 
-  compute->descriptorSetLayout =
-      device->createDescriptorSetLayout(descriptorSetLayoutBindings);
-
-  std::vector<vk::DescriptorPoolSize> descriptorPoolSizes = {
-      {vk::DescriptorPoolSize {vk::DescriptorType::eUniformBuffer, 2},
-       vk::DescriptorPoolSize {vk::DescriptorType::eStorageBuffer, 3},
-       vk::DescriptorPoolSize {vk::DescriptorType::eCombinedImageSampler, 2}}};
-
-  descriptorPool = device->createDescriptorPool(descriptorPoolSizes, 1);
-
-  compute->descriptorSet = device->allocateDescriptorSet(
-      descriptorPool, compute->descriptorSetLayout);
-
-  compute->pipelineLayout =
-      device->handle.createPipelineLayout({{}, compute->descriptorSetLayout});
-
-  compute->commandPool = device->createCommandPool(
-      {vk::CommandPoolCreateFlagBits::eResetCommandBuffer},
-      device->queueFamilyIndices.computeFamily.value());
-
-  compute->commandBuffer = device->allocateCommandBuffer(compute->commandPool);
+  compute = std::make_unique<Compute>(
+      device->handle,
+      device->queueFamilyIndices.computeFamily.value(),
+      descriptorPool,
+      descriptorSetLayoutBindings);
 
   std::vector<float> buffer0 {1, 2, 3};
   std::vector<float> buffer1 {2, 3, 4};
@@ -190,8 +179,8 @@ void Renderer::render()
   // No barrier because using the same queue for now
   compute->commandBuffer.end();
 
-  vk::SubmitInfo si({}, {}, compute->commandBuffer);
-  compute->queue.submit(si);
+  vk::SubmitInfo submitInfo({}, {}, compute->commandBuffer);
+  compute->queue.submit(submitInfo);
   compute->queue.waitIdle();
 
   vk::DescriptorBufferInfo buffer0Descriptor(
@@ -307,7 +296,6 @@ void Renderer::render()
   compute->commandBuffer.end();
 
   device->handle.resetFences(fence);
-  vk::SubmitInfo submitInfo({}, {}, compute->commandBuffer);
   compute->queue.submit(submitInfo, fence);
 
   if (device->handle.waitForFences(fence, vk::True, UINT64_MAX)

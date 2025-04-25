@@ -1,9 +1,6 @@
-#include "compute.hpp"
+#include "graphics.hpp"
 
-#include "device.hpp"
-#include "executor.hpp"
-
-Compute::Compute(
+Graphics::Graphics(
     vk::Device& device,
     uint32_t queueFamilyIndex,
     vk::DescriptorPool& descriptorPool,
@@ -13,4 +10,4 @@ Compute::Compute(
 {
 }
 
-Compute::~Compute() {}
+Graphics::~Graphics() {}

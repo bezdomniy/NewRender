@@ -32,19 +32,8 @@ public:
     }
   };
 
-  vk::DescriptorSetLayout createDescriptorSetLayout(
-      std::vector<vk::DescriptorSetLayoutBinding>& bindings);
   vk::DescriptorPool createDescriptorPool(
       std::vector<vk::DescriptorPoolSize>& poolSizes, uint32_t maxSets);
-  vk::DescriptorSet allocateDescriptorSet(
-      vk::DescriptorPool& descriptorPool,
-      vk::DescriptorSetLayout& descriptorSetLayout);
-
-  vk::CommandPool createCommandPool(vk::CommandPoolCreateFlags flags,
-                                    uint32_t queueIndex);
-  vk::CommandBuffer allocateCommandBuffer(
-      vk::CommandPool& commandPool,
-      vk::CommandBufferLevel level = vk::CommandBufferLevel::ePrimary);
 
   vk::Pipeline createComputePipeline(vk::PipelineShaderStageCreateInfo& stage,
                                      vk::PipelineLayout& pipelineLayout,
