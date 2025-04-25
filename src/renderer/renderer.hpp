@@ -73,6 +73,7 @@ private:
 #endif
 
   void initVulkan();
+  void runCompute();
   void render();
   void cleanup();
 

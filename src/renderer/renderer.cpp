@@ -32,7 +32,8 @@ Renderer::~Renderer()
 void Renderer::run()
 {
   initVulkan();
-  render();
+  runCompute();
+  // render();
   fmt::print("Hello {}!\n", appName);
 }
 
@@ -86,8 +87,9 @@ void Renderer::initVulkan()
   imagesViews = device->getImageViews(images);
 }
 
-void Renderer::render()
+void Renderer::runCompute()
 {
+  // Create compute executor
   std::vector<vk::DescriptorPoolSize> descriptorPoolSizes = {
       {vk::DescriptorPoolSize {vk::DescriptorType::eUniformBuffer, 2},
        vk::DescriptorPoolSize {vk::DescriptorType::eStorageBuffer, 3},
@@ -115,6 +117,7 @@ void Renderer::render()
       descriptorPool,
       descriptorSetLayoutBindings);
 
+  // Create and load buffers
   std::vector<float> buffer0 {1, 2, 3};
   std::vector<float> buffer1 {2, 3, 4};
   std::vector<float> result {0, 99, 0};
@@ -183,6 +186,7 @@ void Renderer::render()
   compute->queue.submit(submitInfo);
   compute->queue.waitIdle();
 
+  // Create pipeline including descriptors and shaders
   vk::DescriptorBufferInfo buffer0Descriptor(
       deviceBuffer0.handle, 0, VK_WHOLE_SIZE);
   vk::DescriptorBufferInfo buffer1Descriptor(
@@ -220,11 +224,10 @@ void Renderer::render()
   auto stage = helloWorldShader->getShaderStageCreateInfo(
       vk::ShaderStageFlagBits::eCompute);
 
-  auto fence = device->handle.createFence({});
-
   compute->pipelines["compute1"] =
       device->createComputePipeline(stage, compute->pipelineLayout);
 
+  // Execute compute pipeline
   compute->commandBuffer.begin(vk::CommandBufferBeginInfo());
 
   // Barrier to ensure that input buffer transfer is finished before compute
@@ -295,6 +298,7 @@ void Renderer::render()
 
   compute->commandBuffer.end();
 
+  auto fence = device->handle.createFence({});
   device->handle.resetFences(fence);
   compute->queue.submit(submitInfo, fence);
 
