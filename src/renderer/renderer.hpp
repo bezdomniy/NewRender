@@ -14,6 +14,7 @@
 #include "buffers/hostBuffer.hpp"
 #include "compute.hpp"
 #include "device.hpp"
+#include "graphics.hpp"
 #include "vk_mem_alloc.h"
 
 class Renderer
@@ -51,7 +52,7 @@ private:
 
   Window* window = nullptr;
   vk::SurfaceKHR surface {VK_NULL_HANDLE};
-  vk::DescriptorPool descriptorPool {VK_NULL_HANDLE};
+  std::unordered_map<std::string, vk::DescriptorPool> descriptorPools;
   // vk::CommandPool commandPool {VK_NULL_HANDLE};
   // std::vector<vk::CommandBuffer> commandBuffers;
 
@@ -67,14 +68,17 @@ private:
 
   std::unique_ptr<Device> device = nullptr;
   std::unique_ptr<Compute> compute = nullptr;
+  std::unique_ptr<Graphics> graphics = nullptr;
 
 #if !defined(NDEBUG)
   vk::DebugUtilsMessengerEXT debugUtilsMessenger {VK_NULL_HANDLE};
 #endif
 
   void initVulkan();
-  void runCompute();
-  void render();
+  void initCompute();
+  void initGraphics();
+  void update();
+  void draw();
   void cleanup();
 
   void createInstance();

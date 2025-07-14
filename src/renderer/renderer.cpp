@@ -1,5 +1,8 @@
+#include <thread>
+
 #include "buffers/deviceBuffer.hpp"
 #include "buffers/hostBuffer.hpp"
+#include "graphics.hpp"
 #define VMA_IMPLEMENTATION
 
 #include <cstdint>
@@ -32,8 +35,16 @@ Renderer::~Renderer()
 void Renderer::run()
 {
   initVulkan();
-  runCompute();
-  // render();
+  initCompute();
+  initGraphics();
+
+  while (true) {
+    update();
+    // draw();
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+
   fmt::print("Hello {}!\n", appName);
 }
 
@@ -87,16 +98,18 @@ void Renderer::initVulkan()
   imagesViews = device->getImageViews(images);
 }
 
-void Renderer::runCompute()
+void Renderer::initCompute()
 {
+  std::vector<vk::DescriptorPoolSize> computeDescriptorPoolSizes = {
+      {vk::DescriptorPoolSize {vk::DescriptorType::eUniformBuffer, 1},
+       vk::DescriptorPoolSize {vk::DescriptorType::eStorageBuffer, 2},
+       vk::DescriptorPoolSize {vk::DescriptorType::eCombinedImageSampler, 1}}};
+
+  auto computeDescriptorPool =
+      device->createDescriptorPool(computeDescriptorPoolSizes, 1);
+  descriptorPools["compute"] = computeDescriptorPool;
+
   // Create compute executor
-  std::vector<vk::DescriptorPoolSize> descriptorPoolSizes = {
-      {vk::DescriptorPoolSize {vk::DescriptorType::eUniformBuffer, 2},
-       vk::DescriptorPoolSize {vk::DescriptorType::eStorageBuffer, 3},
-       vk::DescriptorPoolSize {vk::DescriptorType::eCombinedImageSampler, 2}}};
-
-  descriptorPool = device->createDescriptorPool(descriptorPoolSizes, 1);
-
   std::vector<vk::DescriptorSetLayoutBinding> descriptorSetLayoutBindings = {
       vk::DescriptorSetLayoutBinding {0,
                                       vk::DescriptorType::eStorageBuffer,
@@ -105,22 +118,17 @@ void Renderer::runCompute()
       vk::DescriptorSetLayoutBinding {1,
                                       vk::DescriptorType::eStorageBuffer,
                                       1,
-                                      vk::ShaderStageFlagBits::eCompute},
-      vk::DescriptorSetLayoutBinding {2,
-                                      vk::DescriptorType::eStorageBuffer,
-                                      1,
                                       vk::ShaderStageFlagBits::eCompute}};
 
   compute = std::make_unique<Compute>(
       device->handle,
       device->queueFamilyIndices.computeFamily.value(),
-      descriptorPool,
+      descriptorPools["compute"],
       descriptorSetLayoutBindings);
 
   // Create and load buffers
   std::vector<float> buffer0 {1, 2, 3};
-  std::vector<float> buffer1 {2, 3, 4};
-  std::vector<float> result {0, 99, 0};
+  const auto resultSize = buffer0.size();
 
   HostBuffer& hostBuffer0 =
       createHostBuffer("buffer0",
@@ -128,31 +136,20 @@ void Renderer::runCompute()
                        buffer0.data(),
                        vk::BufferUsageFlagBits::eTransferSrc);
 
-  HostBuffer& hostBuffer1 =
-      createHostBuffer("buffer1",
-                       buffer1.size() * sizeof(float),
-                       buffer1.data(),
-                       vk::BufferUsageFlagBits::eTransferSrc);
-
-  HostBuffer& hostResultBuffer =
-      createHostBuffer("result",
-                       buffer1.size() * sizeof(float),
-                       buffer1.data(),
-                       vk::BufferUsageFlagBits::eTransferDst);
+  createHostBuffer("result",
+                   buffer0.size() * sizeof(float),
+                   buffer0.data(),
+                   vk::BufferUsageFlagBits::eTransferDst);
 
   DeviceBuffer& deviceBuffer0 =
       createDeviceBuffer("buffer0",
                          buffer0.size() * sizeof(float),
                          vk::BufferUsageFlagBits::eStorageBuffer
                              | vk::BufferUsageFlagBits::eTransferDst);
-  DeviceBuffer& deviceBuffer1 =
-      createDeviceBuffer("buffer1",
-                         buffer1.size() * sizeof(float),
-                         vk::BufferUsageFlagBits::eStorageBuffer
-                             | vk::BufferUsageFlagBits::eTransferDst);
+
   DeviceBuffer& deviceResultBuffer =
       createDeviceBuffer("result",
-                         result.size() * sizeof(float),
+                         resultSize * sizeof(float),
                          vk::BufferUsageFlagBits::eStorageBuffer
                              | vk::BufferUsageFlagBits::eTransferSrc
                              | vk::BufferUsageFlagBits::eTransferDst);
@@ -162,9 +159,6 @@ void Renderer::runCompute()
   compute->commandBuffer.copyBuffer(hostBuffer0.handle,
                                     deviceBuffer0.handle,
                                     {{0, 0, buffer0.size() * sizeof(float)}});
-  compute->commandBuffer.copyBuffer(hostBuffer1.handle,
-                                    deviceBuffer1.handle,
-                                    {{0, 0, buffer1.size() * sizeof(float)}});
 
   vk::MemoryBarrier memoryBarrier;
   memoryBarrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -189,29 +183,19 @@ void Renderer::runCompute()
   // Create pipeline including descriptors and shaders
   vk::DescriptorBufferInfo buffer0Descriptor(
       deviceBuffer0.handle, 0, VK_WHOLE_SIZE);
-  vk::DescriptorBufferInfo buffer1Descriptor(
-      deviceBuffer1.handle, 0, VK_WHOLE_SIZE);
+
   vk::DescriptorBufferInfo resultDescriptor(
       deviceResultBuffer.handle, 0, VK_WHOLE_SIZE);
 
   std::vector<vk::WriteDescriptorSet> writeDescriptorSets = {
-      {// Binding 0 : buffer0
-       {compute->descriptorSet,
+      {{compute->descriptorSet,
         0,
         {},
         vk::DescriptorType::eStorageBuffer,
         {},
         buffer0Descriptor},
-       // Binding 1 : buffer1
        {compute->descriptorSet,
         1,
-        {},
-        vk::DescriptorType::eStorageBuffer,
-        {},
-        buffer1Descriptor},
-       // Binding 1 : buffer1
-       {compute->descriptorSet,
-        2,
         {},
         vk::DescriptorType::eStorageBuffer,
         {},
@@ -226,6 +210,14 @@ void Renderer::runCompute()
 
   compute->pipelines["compute1"] =
       device->createComputePipeline(stage, compute->pipelineLayout);
+}
+
+void Renderer::update()
+{
+  std::vector<float> result {0, 99, 0};
+
+  auto& hostResultBuffer = hostBuffers.at("result");
+  auto& deviceResultBuffer = deviceBuffers.at("result");
 
   // Execute compute pipeline
   compute->commandBuffer.begin(vk::CommandBufferBeginInfo());
@@ -300,6 +292,8 @@ void Renderer::runCompute()
 
   auto fence = device->handle.createFence({});
   device->handle.resetFences(fence);
+
+  vk::SubmitInfo submitInfo({}, {}, compute->commandBuffer);
   compute->queue.submit(submitInfo, fence);
 
   if (device->handle.waitForFences(fence, vk::True, UINT64_MAX)
@@ -323,6 +317,35 @@ void Renderer::runCompute()
   fmt::print("Result: {}\n", fmt::join(result, ", "));
 }
 
+void Renderer::initGraphics()
+{
+  std::vector<vk::DescriptorPoolSize> graphicsDescriptorPoolSizes = {
+      {vk::DescriptorPoolSize {vk::DescriptorType::eUniformBuffer, 2},
+       vk::DescriptorPoolSize {vk::DescriptorType::eStorageBuffer, 3},
+       vk::DescriptorPoolSize {vk::DescriptorType::eCombinedImageSampler, 2}}};
+
+  auto graphicsDescriptorPool =
+      device->createDescriptorPool(graphicsDescriptorPoolSizes, 1);
+  descriptorPools["graphics"] = graphicsDescriptorPool;
+
+  // Create graphics executor
+  std::vector<vk::DescriptorSetLayoutBinding> descriptorSetLayoutBindings = {
+      vk::DescriptorSetLayoutBinding {0,
+                                      vk::DescriptorType::eStorageBuffer,
+                                      1,
+                                      vk::ShaderStageFlagBits::eCompute},
+      vk::DescriptorSetLayoutBinding {1,
+                                      vk::DescriptorType::eStorageBuffer,
+                                      1,
+                                      vk::ShaderStageFlagBits::eCompute}};
+
+  graphics = std::make_unique<Graphics>(
+      device->handle,
+      device->queueFamilyIndices.graphicsFamily.value(),
+      descriptorPools["graphics"],
+      descriptorSetLayoutBindings);
+}
+
 void Renderer::cleanup()
 {
   device->computeQueue.waitIdle();
@@ -333,8 +356,11 @@ void Renderer::cleanup()
   vmaDestroyAllocator(allocator);
 
   compute.reset();
+  graphics.reset();
 
-  device->handle.destroyDescriptorPool(descriptorPool);
+  for (auto& [name, descriptorPool] : descriptorPools) {
+    device->handle.destroyDescriptorPool(descriptorPool);
+  }
 
   // device->handle.destroyCommandPool(commandPool);
   for (auto& imageView : imagesViews) {
