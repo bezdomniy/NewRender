@@ -7,7 +7,7 @@
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
             "args": [],
-            "cwd": "${workspaceFolder}/out/build/default",
+            "cwd": "${workspaceFolder}/out/build/debug",
             "MIMode": "lldb"
         },
         {
@@ -16,7 +16,7 @@
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
             "args": [],
-            "cwd": "${workspaceFolder}/out/build/default"
+            "cwd": "${workspaceFolder}/out/build/debug"
         },
         {
             "name": "(CodeLLDB) Launch",
@@ -24,7 +24,7 @@
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
             "args": [],
-            "cwd": "${workspaceFolder}/out/build/default"
+            "cwd": "${workspaceFolder}/out/build/debug"
         }
     ]
 }
