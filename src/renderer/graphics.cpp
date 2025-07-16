@@ -10,4 +10,4 @@ Graphics::Graphics(
 {
 }
 
-Graphics::~Graphics() {}
+Graphics::~Graphics() = default;

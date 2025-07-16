@@ -3,7 +3,7 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
-Window::Window(std::string name, uint32_t width, uint32_t height)
+Window::Window(const std::string& name, uint32_t width, uint32_t height)
     : properties({name, true, {width, height}})
 {
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
@@ -17,8 +17,8 @@ Window::Window(std::string name, uint32_t width, uint32_t height)
   // glfwSetErrorCallback(error_callback);
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-  handle = glfwCreateWindow((int)properties.extent.width,
-                            (int)properties.extent.height,
+  handle = glfwCreateWindow(static_cast<int>(properties.extent.width),
+                            static_cast<int>(properties.extent.height),
                             properties.title.c_str(),
                             nullptr,
                             nullptr);
@@ -42,7 +42,7 @@ auto Window::getExtensions(uint32_t* count) -> const char**
   return glfwGetRequiredInstanceExtensions(count);
 }
 
-auto Window::create_surface(vk::Instance instance) -> vk::SurfaceKHR
+auto Window::create_surface(const vk::Instance instance) const -> vk::SurfaceKHR
 {
   if (instance == VK_NULL_HANDLE || !handle) {
     throw std::runtime_error("Instance or window handle is null.");
@@ -51,7 +51,7 @@ auto Window::create_surface(vk::Instance instance) -> vk::SurfaceKHR
 
   VkSurfaceKHR surface;
 
-  auto result = glfwCreateWindowSurface(
+  const auto result = glfwCreateWindowSurface(
       static_cast<VkInstance>(instance), handle, nullptr, &surface);
 
   if (result != VK_SUCCESS) {

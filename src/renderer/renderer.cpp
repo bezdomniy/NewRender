@@ -7,6 +7,8 @@
 
 #include <cstdint>
 #include <memory>
+#include <ranges>
+#include <utility>
 #include <vector>
 
 #include <fmt/base.h>
@@ -23,16 +25,18 @@
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 #endif
 
-Renderer::Renderer(std::string name, Window* window)
-    : appName(name)
-    , window(window) {};
+Renderer::Renderer(std::string name, Window* window, Game& game)
+    : appName(std::move(name))
+    , window(window)
+    , game(game)
+    , allocator(nullptr) {};
 
 Renderer::~Renderer()
 {
   cleanup();
 }
 
-void Renderer::run()
+[[noreturn]] void Renderer::run()
 {
   initVulkan();
   initCompute();
@@ -44,37 +48,35 @@ void Renderer::run()
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
-
-  fmt::print("Hello {}!\n", appName);
 }
 
-HostBuffer& Renderer::createHostBuffer(std::string name,
+HostBuffer& Renderer::createHostBuffer(const std::string& name,
                                        size_t size,
                                        void* data,
                                        vk::BufferUsageFlags usageFlags,
                                        VmaMemoryUsage memoryUsage,
                                        VmaAllocationCreateFlags flags)
 {
-  auto result = hostBuffers.try_emplace(name,
-                                        device->handle,
-                                        allocator,
-                                        size,
-                                        data,
-                                        usageFlags,
-                                        memoryUsage,
-                                        flags);
-  return result.first->second;
+  auto [fst, snd] = hostBuffers.try_emplace(name,
+                                            device->handle,
+                                            allocator,
+                                            size,
+                                            data,
+                                            usageFlags,
+                                            memoryUsage,
+                                            flags);
+  return fst->second;
 };
 
-DeviceBuffer& Renderer::createDeviceBuffer(std::string name,
+DeviceBuffer& Renderer::createDeviceBuffer(const std::string& name,
                                            size_t size,
                                            vk::BufferUsageFlags usageFlags,
                                            VmaMemoryUsage memoryUsage,
                                            VmaAllocationCreateFlags flags)
 {
-  auto result = deviceBuffers.try_emplace(
+  auto [fst, snd] = deviceBuffers.try_emplace(
       name, device->handle, allocator, size, usageFlags, memoryUsage, flags);
-  return result.first->second;
+  return fst->second;
 };
 
 void Renderer::initVulkan()
@@ -105,7 +107,7 @@ void Renderer::initCompute()
        vk::DescriptorPoolSize {vk::DescriptorType::eStorageBuffer, 2},
        vk::DescriptorPoolSize {vk::DescriptorType::eCombinedImageSampler, 1}}};
 
-  auto computeDescriptorPool =
+  const auto computeDescriptorPool =
       device->createDescriptorPool(computeDescriptorPoolSizes, 1);
   descriptorPools["compute"] = computeDescriptorPool;
 
@@ -127,38 +129,38 @@ void Renderer::initCompute()
       descriptorSetLayoutBindings);
 
   // Create and load buffers
-  std::vector<float> buffer0 {1, 2, 3};
-  const auto resultSize = buffer0.size();
+  const auto resultSize = game.vertices.size();
 
-  HostBuffer& hostBuffer0 =
+  const HostBuffer& hostBuffer0 =
       createHostBuffer("buffer0",
-                       buffer0.size() * sizeof(float),
-                       buffer0.data(),
+                       game.vertices.size() * sizeof(glm::vec2),
+                       game.vertices.data(),
                        vk::BufferUsageFlagBits::eTransferSrc);
 
   createHostBuffer("result",
-                   buffer0.size() * sizeof(float),
-                   buffer0.data(),
+                   game.vertices.size() * sizeof(glm::vec2),
+                   game.vertices.data(),
                    vk::BufferUsageFlagBits::eTransferDst);
 
-  DeviceBuffer& deviceBuffer0 =
+  const DeviceBuffer& deviceBuffer0 =
       createDeviceBuffer("buffer0",
-                         buffer0.size() * sizeof(float),
+                         game.vertices.size() * sizeof(glm::vec2),
                          vk::BufferUsageFlagBits::eStorageBuffer
                              | vk::BufferUsageFlagBits::eTransferDst);
 
-  DeviceBuffer& deviceResultBuffer =
+  const DeviceBuffer& deviceResultBuffer =
       createDeviceBuffer("result",
-                         resultSize * sizeof(float),
+                         resultSize * sizeof(glm::vec2),
                          vk::BufferUsageFlagBits::eStorageBuffer
                              | vk::BufferUsageFlagBits::eTransferSrc
                              | vk::BufferUsageFlagBits::eTransferDst);
 
   compute->commandBuffer.begin(vk::CommandBufferBeginInfo());
 
-  compute->commandBuffer.copyBuffer(hostBuffer0.handle,
-                                    deviceBuffer0.handle,
-                                    {{0, 0, buffer0.size() * sizeof(float)}});
+  compute->commandBuffer.copyBuffer(
+      hostBuffer0.handle,
+      deviceBuffer0.handle,
+      {{0, 0, game.vertices.size() * sizeof(glm::vec2)}});
 
   vk::MemoryBarrier memoryBarrier;
   memoryBarrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -176,7 +178,7 @@ void Renderer::initCompute()
   // No barrier because using the same queue for now
   compute->commandBuffer.end();
 
-  vk::SubmitInfo submitInfo({}, {}, compute->commandBuffer);
+  const vk::SubmitInfo submitInfo({}, {}, compute->commandBuffer);
   compute->queue.submit(submitInfo);
   compute->queue.waitIdle();
 
@@ -204,7 +206,8 @@ void Renderer::initCompute()
   device->handle.updateDescriptorSets(writeDescriptorSets, nullptr);
 
   std::string shaderPath = "src/shaders/bin/hello-world.slang.spv";
-  auto helloWorldShader = std::make_unique<Shader>(device.get(), shaderPath);
+  const auto helloWorldShader =
+      std::make_unique<Shader>(device.get(), shaderPath);
   auto stage = helloWorldShader->getShaderStageCreateInfo(
       vk::ShaderStageFlagBits::eCompute);
 
@@ -212,12 +215,12 @@ void Renderer::initCompute()
       device->createComputePipeline(stage, compute->pipelineLayout);
 }
 
-void Renderer::update()
+void Renderer::update() const
 {
-  std::vector<float> result {0, 99, 0};
+  std::vector<glm::vec2> result {{0, 0}, {0, 0}, {0, 0}};
 
-  auto& hostResultBuffer = hostBuffers.at("result");
-  auto& deviceResultBuffer = deviceBuffers.at("result");
+  const auto& hostResultBuffer = hostBuffers.at("result");
+  const auto& deviceResultBuffer = deviceBuffers.at("result");
 
   // Execute compute pipeline
   compute->commandBuffer.begin(vk::CommandBufferBeginInfo());
@@ -249,7 +252,7 @@ void Renderer::update()
                                             compute->descriptorSet,
                                             {});
 
-  compute->commandBuffer.dispatch((uint32_t)result.size(), 1, 1);
+  compute->commandBuffer.dispatch(static_cast<uint32_t>(result.size()), 1, 1);
 
   // Barrier to ensure that shader writes are finished before buffer is read
   // back from GPU
@@ -269,9 +272,10 @@ void Renderer::update()
       nullptr);
 
   // copy to host
-  compute->commandBuffer.copyBuffer(deviceResultBuffer.handle,
-                                    hostResultBuffer.handle,
-                                    {{0, 0, result.size() * sizeof(float)}});
+  compute->commandBuffer.copyBuffer(
+      deviceResultBuffer.handle,
+      hostResultBuffer.handle,
+      {{0, 0, result.size() * sizeof(glm::vec2)}});
 
   // Barrier to ensure that buffer copy is finished before host reading from it
   bufferBarrier.buffer = hostResultBuffer.handle;
@@ -290,10 +294,10 @@ void Renderer::update()
 
   compute->commandBuffer.end();
 
-  auto fence = device->handle.createFence({});
+  const auto fence = device->handle.createFence({});
   device->handle.resetFences(fence);
 
-  vk::SubmitInfo submitInfo({}, {}, compute->commandBuffer);
+  const vk::SubmitInfo submitInfo({}, {}, compute->commandBuffer);
   compute->queue.submit(submitInfo, fence);
 
   if (device->handle.waitForFences(fence, vk::True, UINT64_MAX)
@@ -310,11 +314,14 @@ void Renderer::update()
 
   memcpy(result.data(),
          hostResultBuffer.allocInfo.pMappedData,
-         result.size() * sizeof(float));
+         result.size() * sizeof(glm::vec2));
 
   compute->queue.waitIdle();
 
-  fmt::print("Result: {}\n", fmt::join(result, ", "));
+  for (auto& item : result) {
+    fmt::print("({},{}), ", item.x, item.y);
+  }
+  fmt::print("\n");
 }
 
 void Renderer::initGraphics()
@@ -358,12 +365,12 @@ void Renderer::cleanup()
   compute.reset();
   graphics.reset();
 
-  for (auto& [name, descriptorPool] : descriptorPools) {
+  for (const auto& descriptorPool : descriptorPools | std::views::values) {
     device->handle.destroyDescriptorPool(descriptorPool);
   }
 
   // device->handle.destroyCommandPool(commandPool);
-  for (auto& imageView : imagesViews) {
+  for (const auto& imageView : imagesViews) {
     device->handle.destroyImageView(imageView);
   }
   if (swapchain != VK_NULL_HANDLE) {
@@ -381,7 +388,7 @@ void Renderer::createInstance()
 {
   try {
     uint32_t glfwExtensionCount = 0;
-    auto glfwExtensions = window->getExtensions(&glfwExtensionCount);
+    const auto glfwExtensions = Window::getExtensions(&glfwExtensionCount);
 
     std::vector<const char*> enabledExtensions(
         glfwExtensions, glfwExtensions + glfwExtensionCount);
@@ -395,14 +402,14 @@ void Renderer::createInstance()
     enabledLayers.push_back("VK_LAYER_KHRONOS_validation");
 #endif
 
-    vk::ApplicationInfo applicationInfo(appName.c_str(),
-                                        VK_MAKE_VERSION(0, 0, 1),
-                                        "NewEngine",
-                                        VK_MAKE_VERSION(0, 0, 1),
-                                        VK_API_VERSION_1_3);
+    const vk::ApplicationInfo applicationInfo(appName.c_str(),
+                                              VK_MAKE_VERSION(0, 0, 1),
+                                              "NewEngine",
+                                              VK_MAKE_VERSION(0, 0, 1),
+                                              VK_API_VERSION_1_3);
 
 #ifdef __APPLE__
-    vk::InstanceCreateFlags flags = vk::InstanceCreateFlags {
+    auto flags = vk::InstanceCreateFlags {
         vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR};
 
     enabledExtensions.push_back(

@@ -4,7 +4,8 @@
 int main()
 {
   Window window("My Window", 1280, 720);
-  Renderer renderer("My World", &window);
+  Game game;
+  Renderer renderer("My World", &window, game);
   renderer.run();
 
   return 0;

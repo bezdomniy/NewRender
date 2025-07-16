@@ -10,7 +10,7 @@ struct GLFWwindow;
 class Window
 {
 public:
-  Window(std::string name, uint32_t width, uint32_t height);
+  Window(const std::string& name, uint32_t width, uint32_t height);
   ~Window();
 
   struct Extent
@@ -21,15 +21,16 @@ public:
 
   struct Properties
   {
-    std::string title = "";
+    std::string title;
     bool resizable = true;
     Extent extent = {1280, 720};
   };
 
-  auto create_surface(vk::Instance instance) -> vk::SurfaceKHR;
+  [[nodiscard]] auto create_surface(vk::Instance instance) const
+      -> vk::SurfaceKHR;
 
-  auto getExtensions(uint32_t* count) -> const char**;
-  const Extent& getExtent() const;
+  static auto getExtensions(uint32_t* count) -> const char**;
+  [[nodiscard]] const Extent& getExtent() const;
 
 private:
   Properties properties;

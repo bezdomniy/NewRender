@@ -12,10 +12,10 @@
 
 HostBuffer::HostBuffer(vk::Device& device,
                        VmaAllocator& allocator,
-                       size_t size,
-                       void* data,
-                       vk::BufferUsageFlags usageFlags,
-                       VmaMemoryUsage memoryUsage,
+                       const size_t size,
+                       const void* data,
+                       const vk::BufferUsageFlags usageFlags,
+                       const VmaMemoryUsage memoryUsage,
                        VmaAllocationCreateFlags flags)
     : Buffer(device, allocator)
 {

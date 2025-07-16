@@ -1,21 +1,19 @@
 #pragma once
 
-#include <cstddef>
-
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_enums.hpp>
 
 #include "buffer.hpp"
 #include "vk_mem_alloc.h"
 
-class HostBuffer : public virtual Buffer
+class HostBuffer final : public virtual Buffer
 {
 public:
   HostBuffer(
       vk::Device& device,
       VmaAllocator& allocator,
       size_t size,
-      void* data,
+      const void* data,
       vk::BufferUsageFlags usageFlags = vk::BufferUsageFlagBits::eTransferSrc
           | vk::BufferUsageFlagBits::eTransferDst,
       VmaMemoryUsage memoryUsage = VMA_MEMORY_USAGE_AUTO,

@@ -4,6 +4,8 @@ add_library(application STATIC)
 target_sources(application PRIVATE 
     window.cpp 
     window.hpp
+    game.hpp
+    game.cpp
 )
 
 # Add include directory for the application library

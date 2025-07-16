@@ -1,6 +1,6 @@
 // hello-world.slang
-StructuredBuffer<float> buffer0;
-RWStructuredBuffer<float> result;
+StructuredBuffer<float2> buffer0;
+RWStructuredBuffer<float2> result;
 
 [shader("compute")]
 [numthreads(1,1,1)]

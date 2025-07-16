@@ -12,10 +12,10 @@ class Compute;
 class Device
 {
 public:
-  Device(vk::Instance& instance);
+  explicit Device(vk::Instance& instance);
   Device(vk::Instance& instance, vk::SurfaceKHR* surface);
   ~Device();
-  void destroy();
+  void destroy() const;
 
   Compute createCompute();
 
@@ -25,7 +25,7 @@ public:
     std::optional<uint32_t> presentFamily;
     std::optional<uint32_t> computeFamily;
 
-    bool isComplete()
+    [[nodiscard]] bool isComplete() const
     {
       return graphicsFamily.has_value() && presentFamily.has_value()
           && computeFamily.has_value();
@@ -37,10 +37,10 @@ public:
 
   vk::Pipeline createComputePipeline(vk::PipelineShaderStageCreateInfo& stage,
                                      vk::PipelineLayout& pipelineLayout,
-                                     vk::PipelineCache pipelineCache = nullptr);
+                                     vk::PipelineCache pipelineCache = nullptr) const;
 
   vk::SwapchainKHR createSwapchain();
-  std::vector<vk::Image> getSwapchainImages(vk::SwapchainKHR swapchain);
+  std::vector<vk::Image> getSwapchainImages(vk::SwapchainKHR swapchain) const;
   std::vector<vk::ImageView> getImageViews(std::vector<vk::Image>& images);
 
   vk::PhysicalDeviceMemoryProperties memoryProperties;
@@ -64,17 +64,17 @@ private:
 
   SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice device);
 
-  vk::SurfaceFormatKHR chooseSwapSurfaceFormat(
+  static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(
       const std::vector<vk::SurfaceFormatKHR>& availableFormats);
-  vk::PresentModeKHR chooseSwapPresentMode(
+  static vk::PresentModeKHR chooseSwapPresentMode(
       const std::vector<vk::PresentModeKHR>& availablePresentModes);
-  vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities);
+  static vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities);
 
   void pickPhysicalDevice(std::vector<const char*>& deviceExtensions,
                           bool graphicsRequired = true);
   QueueFamilyIndices findQueueFamilies(vk::PhysicalDevice device,
                                        bool graphicsRequired = true);
-  bool checkDeviceExtensionSupport(
+  static bool checkDeviceExtensionSupport(
       vk::PhysicalDevice device,
       const std::vector<const char*>& deviceExtensions);
 };

@@ -8,6 +8,7 @@
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
+#include "../application/game.hpp"
 #include "../application/window.hpp"
 #include "buffers/buffer.hpp"
 #include "buffers/deviceBuffer.hpp"
@@ -20,11 +21,11 @@
 class Renderer
 {
 public:
-  Renderer(std::string name, Window* window);
+  Renderer(std::string name, Window* window, Game& game);
   ~Renderer();
 
   HostBuffer& createHostBuffer(
-      std::string name,
+      const std::string& name,
       size_t size = 0,
       void* data = nullptr,
       vk::BufferUsageFlags usageFlags = vk::BufferUsageFlagBits::eTransferSrc
@@ -35,7 +36,7 @@ public:
           | VMA_ALLOCATION_CREATE_MAPPED_BIT);
 
   DeviceBuffer& createDeviceBuffer(
-      std::string name,
+      const std::string& name,
       size_t size = 0,
       vk::BufferUsageFlags usageFlags = vk::BufferUsageFlagBits::eStorageBuffer,
       VmaMemoryUsage memoryUsage = VMA_MEMORY_USAGE_AUTO,
@@ -43,7 +44,7 @@ public:
           VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
 
   // void createComputeTask(std::string name);
-  void run();
+  [[noreturn]] void run();
 
 private:
   std::string appName;
@@ -51,6 +52,7 @@ private:
   vk::Instance instance {VK_NULL_HANDLE};
 
   Window* window = nullptr;
+  Game& game;
   vk::SurfaceKHR surface {VK_NULL_HANDLE};
   std::unordered_map<std::string, vk::DescriptorPool> descriptorPools;
   // vk::CommandPool commandPool {VK_NULL_HANDLE};
@@ -77,7 +79,7 @@ private:
   void initVulkan();
   void initCompute();
   void initGraphics();
-  void update();
+  void update() const;
   void draw();
   void cleanup();
 

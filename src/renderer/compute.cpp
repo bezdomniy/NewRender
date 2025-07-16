@@ -13,4 +13,4 @@ Compute::Compute(
 {
 }
 
-Compute::~Compute() {}
+Compute::~Compute() = default;

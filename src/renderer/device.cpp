@@ -1,4 +1,3 @@
-#include <cstdint>
 #include <set>
 #include <vector>
 
@@ -83,9 +82,9 @@ Device::Device(vk::Instance& instance, vk::SurfaceKHR* surface)
   handle.getQueue(queueFamilyIndices.computeFamily.value(), 0, &computeQueue);
 }
 
-Device::~Device() {}
+Device::~Device() = default;
 
-void Device::destroy()
+void Device::destroy() const
 {
   handle.destroy();
 }
@@ -99,7 +98,7 @@ vk::DescriptorPool Device::createDescriptorPool(
 vk::Pipeline Device::createComputePipeline(
     vk::PipelineShaderStageCreateInfo& stage,
     vk::PipelineLayout& pipelineLayout,
-    vk::PipelineCache pipelineCache)
+    vk::PipelineCache pipelineCache) const
 {
   vk::ComputePipelineCreateInfo compute_pipeline_create_info(
       {}, stage, pipelineLayout);
@@ -160,7 +159,8 @@ vk::SwapchainKHR Device::createSwapchain()
   return handle.createSwapchainKHR(createInfo);
 }
 
-std::vector<vk::Image> Device::getSwapchainImages(vk::SwapchainKHR swapchain)
+std::vector<vk::Image> Device::getSwapchainImages(
+    vk::SwapchainKHR swapchain) const
 {
   return handle.getSwapchainImagesKHR(swapchain);
 }
