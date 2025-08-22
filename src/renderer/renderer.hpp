@@ -80,7 +80,7 @@ private:
   void initCompute();
   void initGraphics();
   void update() const;
-  void draw();
+  void draw() const;
   void cleanup();
 
   void createInstance();

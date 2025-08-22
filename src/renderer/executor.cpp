@@ -1,3 +1,5 @@
+#include <ranges>
+
 #include "executor.hpp"
 
 Executor::Executor(
@@ -20,14 +22,14 @@ Executor::Executor(
 }
 
 vk::DescriptorSetLayout Executor::createDescriptorSetLayout(
-    std::vector<vk::DescriptorSetLayoutBinding>& bindings)
+    std::vector<vk::DescriptorSetLayoutBinding>& bindings) const
 {
   return device.createDescriptorSetLayout({{}, bindings, {}});
 }
 
 vk::DescriptorSet Executor::allocateDescriptorSet(
     vk::DescriptorPool& descriptorPool,
-    vk::DescriptorSetLayout& descriptorSetLayout)
+    vk::DescriptorSetLayout& descriptorSetLayout) const
 {
 #if defined(ANDROID)
   vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo(
@@ -41,13 +43,13 @@ vk::DescriptorSet Executor::allocateDescriptorSet(
 }
 
 vk::CommandPool Executor::createCommandPool(vk::CommandPoolCreateFlags flags,
-                                            uint32_t queueIndex)
+                                            uint32_t queueIndex) const
 {
   return device.createCommandPool({flags, queueIndex});
 }
 
-vk::CommandBuffer Executor::allocateCommandBuffer(vk::CommandPool& commandPool,
-                                                  vk::CommandBufferLevel level)
+vk::CommandBuffer Executor::allocateCommandBuffer(
+    vk::CommandPool& commandPool, vk::CommandBufferLevel level) const
 {
   return device.allocateCommandBuffers({commandPool, level, 1}).front();
 }
@@ -62,8 +64,8 @@ void Executor::destroy()
   // storageBuffer.reset();
   // uniformBuffer.reset();
 
-  for (auto& pipeline : pipelines) {
-    device.destroyPipeline(pipeline.second);
+  for (auto& val : pipelines | std::views::values) {
+    device.destroyPipeline(val);
   }
 
   device.destroyPipelineLayout(pipelineLayout);

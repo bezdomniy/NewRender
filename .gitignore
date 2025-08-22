@@ -2,3 +2,4 @@ out/
 .cache/
 .zed/
 compile_commands.json
+.idea/

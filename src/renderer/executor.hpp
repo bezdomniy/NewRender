@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdint>
 #include <unordered_map>
 
 #include <vulkan/vulkan.hpp>
@@ -39,14 +38,14 @@ protected:
 private:
   vk::DescriptorSet allocateDescriptorSet(
       vk::DescriptorPool& descriptorPool,
-      vk::DescriptorSetLayout& descriptorSetLayout);
+      vk::DescriptorSetLayout& descriptorSetLayout) const;
 
   vk::DescriptorSetLayout createDescriptorSetLayout(
-      std::vector<vk::DescriptorSetLayoutBinding>& bindings);
-  vk::CommandPool createCommandPool(vk::CommandPoolCreateFlags flags,
-                                    uint32_t queueIndex);
+      std::vector<vk::DescriptorSetLayoutBinding>& bindings) const;
+  [[nodiscard]] vk::CommandPool createCommandPool(
+      vk::CommandPoolCreateFlags flags, uint32_t queueIndex) const;
   vk::CommandBuffer allocateCommandBuffer(
       vk::CommandPool& commandPool,
-      vk::CommandBufferLevel level = vk::CommandBufferLevel::ePrimary);
+      vk::CommandBufferLevel level = vk::CommandBufferLevel::ePrimary) const;
   vk::Device& device;
 };

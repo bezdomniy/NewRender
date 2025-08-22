@@ -353,6 +353,8 @@ void Renderer::initGraphics()
       descriptorSetLayoutBindings);
 }
 
+void Renderer::draw() const {}
+
 void Renderer::cleanup()
 {
   device->computeQueue.waitIdle();
