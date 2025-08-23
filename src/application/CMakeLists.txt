@@ -12,4 +12,4 @@ target_sources(application PRIVATE
 target_include_directories(application PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Link the 'application' library with its dependencies
-target_link_libraries(application PRIVATE glfw)
+target_link_libraries(application PRIVATE SDL3::SDL3)

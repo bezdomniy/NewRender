@@ -1,45 +1,47 @@
 #include "window.hpp"
-
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
+#include "SDL3/SDL_init.h"
 
 Window::Window(const std::string& name, uint32_t width, uint32_t height)
     : properties({name, true, {width, height}})
 {
-#if defined(VK_USE_PLATFORM_XLIB_KHR)
-  glfwInitHint(GLFW_X11_XCB_VULKAN_SURFACE, false);
-#endif
+  // Initialize SDL
+  if (SDL_Init(SDL_INIT_VIDEO) == false) {
+    SDL_Log("SDL could not initialize! SDL error: %s\n", SDL_GetError());
+  } else {
+    SDL_WindowFlags window_flags =
+        SDL_WINDOW_VULKAN | SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE;
 
-  if (!glfwInit()) {
-    throw std::runtime_error("GLFW couldn't be initialized.");
+    // Create window
+    handle = SDL_CreateWindow("NewRender",
+                              static_cast<int>(properties.extent.width),
+                              static_cast<int>(properties.extent.height),
+                              window_flags);
+
+    if (!handle) {
+      SDL_Log("Window could not be created! SDL error: %s\n", SDL_GetError());
+    } else {
+      surface = SDL_GetWindowSurface(handle);
+    }
   }
-
-  // glfwSetErrorCallback(error_callback);
-  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-  handle = glfwCreateWindow(static_cast<int>(properties.extent.width),
-                            static_cast<int>(properties.extent.height),
-                            properties.title.c_str(),
-                            nullptr,
-                            nullptr);
-
-  if (!handle) {
-    throw std::runtime_error("Couldn't create glfw window.");
-  }
-
-  glfwSetInputMode(handle, GLFW_STICKY_KEYS, 1);
-  glfwSetInputMode(handle, GLFW_STICKY_MOUSE_BUTTONS, 1);
 }
 
 Window::~Window()
 {
-  glfwDestroyWindow(handle);
-  glfwTerminate();
+  // Clean up surface
+  SDL_DestroySurface(surface);
+  surface = nullptr;
+
+  // Destroy window
+  SDL_DestroyWindow(handle);
+  handle = nullptr;
+
+  // Quit SDL subsystems
+  SDL_Quit();
 }
 
-auto Window::getExtensions(uint32_t* count) -> const char**
+auto Window::getExtensions(uint32_t* count) -> const char* const*
 {
-  return glfwGetRequiredInstanceExtensions(count);
+  return SDL_Vulkan_GetInstanceExtensions(count);
 }
 
 auto Window::create_surface(const vk::Instance instance) const -> vk::SurfaceKHR
@@ -51,8 +53,8 @@ auto Window::create_surface(const vk::Instance instance) const -> vk::SurfaceKHR
 
   VkSurfaceKHR surface;
 
-  const auto result = glfwCreateWindowSurface(
-      static_cast<VkInstance>(instance), handle, nullptr, &surface);
+  const auto result =
+      SDL_Vulkan_CreateSurface(handle, instance, nullptr, &surface);
 
   if (result != VK_SUCCESS) {
     throw std::runtime_error("Failed to create window surface.");
