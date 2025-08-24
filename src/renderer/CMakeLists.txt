@@ -33,7 +33,7 @@ target_link_libraries(renderer PRIVATE
     Vulkan::Vulkan
     GPUOpen::VulkanMemoryAllocator
     glm::glm
-    glfw
+    SDL3::SDL3
     imgui::imgui
     fmt::fmt
 )

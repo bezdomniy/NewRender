@@ -3,9 +3,10 @@
 #include <cstdint>
 #include <string>
 
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
+#include <SDL3/SDL_vulkan.h>
 #include <vulkan/vulkan.hpp>
-
-struct GLFWwindow;
 
 class Window
 {
@@ -29,10 +30,10 @@ public:
   [[nodiscard]] auto create_surface(vk::Instance instance) const
       -> vk::SurfaceKHR;
 
-  static auto getExtensions(uint32_t* count) -> const char**;
+  static auto getExtensions(uint32_t* count) -> const char *const *;
   [[nodiscard]] const Extent& getExtent() const;
 
 private:
   Properties properties;
-  GLFWwindow* handle = nullptr;
+  SDL_Window* handle = nullptr;
 };

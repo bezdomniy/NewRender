@@ -389,11 +389,11 @@ void Renderer::cleanup()
 void Renderer::createInstance()
 {
   try {
-    uint32_t glfwExtensionCount = 0;
-    const auto glfwExtensions = Window::getExtensions(&glfwExtensionCount);
+    uint32_t sdlExtensionCount = 0;
+    const auto sdlExtensions = Window::getExtensions(&sdlExtensionCount);
 
     std::vector<const char*> enabledExtensions(
-        glfwExtensions, glfwExtensions + glfwExtensionCount);
+        sdlExtensions, sdlExtensions + sdlExtensionCount);
 
 #if !defined(NDEBUG)
     enabledExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -418,7 +418,7 @@ void Renderer::createInstance()
         VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
     enabledExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 #else
-    vk::InstanceCreateFlags flags = vk::InstanceCreateFlags {};
+    auto flags = vk::InstanceCreateFlags {};
 #endif
 
 #if (VULKAN_HPP_DISPATCH_LOADER_DYNAMIC == 1)

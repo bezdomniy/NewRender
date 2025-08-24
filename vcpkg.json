@@ -1,9 +1,12 @@
 {
   "dependencies": [
-    "fmt",
-    "glfw3",
+    "fmt",    
     "glm",
     "imgui",
+    {
+      "name": "sdl3",
+      "features": [ "vulkan" ]
+    },
     "vulkan",
     "vulkan-memory-allocator"
   ]
