@@ -418,7 +418,7 @@ void Renderer::createInstance()
         VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
     enabledExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 #else
-    vk::InstanceCreateFlags flags = vk::InstanceCreateFlags {};
+    auto flags = vk::InstanceCreateFlags {};
 #endif
 
 #if (VULKAN_HPP_DISPATCH_LOADER_DYNAMIC == 1)

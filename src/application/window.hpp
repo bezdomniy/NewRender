@@ -36,5 +36,4 @@ public:
 private:
   Properties properties;
   SDL_Window* handle = nullptr;
-  SDL_Surface* surface = nullptr;
 };
