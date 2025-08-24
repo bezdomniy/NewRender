@@ -35,9 +35,16 @@ public:
   vk::DescriptorPool createDescriptorPool(
       std::vector<vk::DescriptorPoolSize>& poolSizes, uint32_t maxSets);
 
-  vk::Pipeline createComputePipeline(vk::PipelineShaderStageCreateInfo& stage,
-                                     vk::PipelineLayout& pipelineLayout,
-                                     vk::PipelineCache pipelineCache = nullptr) const;
+  vk::Pipeline createComputePipeline(
+      vk::PipelineShaderStageCreateInfo& stage,
+      vk::PipelineLayout& pipelineLayout,
+      vk::PipelineCache pipelineCache = nullptr) const;
+
+  vk::Pipeline createGraphicsPipeline(
+      vk::PipelineShaderStageCreateInfo& vertexStage,
+      vk::PipelineShaderStageCreateInfo& fragmentStage,
+      vk::PipelineLayout& pipelineLayout,
+      vk::PipelineCache pipelineCache = nullptr) const;
 
   vk::SwapchainKHR createSwapchain();
   std::vector<vk::Image> getSwapchainImages(vk::SwapchainKHR swapchain) const;
@@ -68,7 +75,8 @@ private:
       const std::vector<vk::SurfaceFormatKHR>& availableFormats);
   static vk::PresentModeKHR chooseSwapPresentMode(
       const std::vector<vk::PresentModeKHR>& availablePresentModes);
-  static vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities);
+  static vk::Extent2D chooseSwapExtent(
+      const vk::SurfaceCapabilitiesKHR& capabilities);
 
   void pickPhysicalDevice(std::vector<const char*>& deviceExtensions,
                           bool graphicsRequired = true);

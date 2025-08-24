@@ -112,6 +112,41 @@ vk::Pipeline Device::createComputePipeline(
   return pipeline;
 }
 
+vk::Pipeline Device::createGraphicsPipeline(
+    vk::PipelineShaderStageCreateInfo& vertexStage,
+    vk::PipelineShaderStageCreateInfo& fragmentStage,
+    vk::PipelineLayout& pipelineLayout,
+    vk::PipelineCache pipelineCache) const
+{
+  std::array<vk::PipelineShaderStageCreateInfo, 2>
+      pipelineShaderStageCreateInfos = {vertexStage, fragmentStage};
+
+  vk::GraphicsPipelineCreateInfo graphics_pipeline_create_info {
+      vk::PipelineCreateFlags(),
+      pipelineShaderStageCreateInfos,
+      nullptr,  // pVertexInputState
+      nullptr,  // pInputAssemblyState
+      nullptr,  // pTessellationState
+      nullptr,  // pViewportState
+      nullptr,  // pRasterizationState
+      nullptr,  // pMultisampleState
+      nullptr,  // pDepthStencilState
+      nullptr,  // pColorBlendState
+      nullptr,  // pDynamicState,
+      pipelineLayout,
+      nullptr,  // renderPass
+      0,  // subpass
+      nullptr};
+
+  vk::Result result;
+  vk::Pipeline pipeline;
+  std::tie(result, pipeline) = handle.createGraphicsPipeline(
+      pipelineCache, graphics_pipeline_create_info);
+  assert(result == vk::Result::eSuccess);
+
+  return pipeline;
+}
+
 vk::SwapchainKHR Device::createSwapchain()
 {
   SwapChainSupportDetails swapChainSupport =

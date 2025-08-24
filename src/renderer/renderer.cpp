@@ -205,7 +205,7 @@ void Renderer::initCompute()
 
   device->handle.updateDescriptorSets(writeDescriptorSets, nullptr);
 
-  std::string shaderPath = "src/shaders/bin/hello-world.slang.spv";
+  std::string shaderPath = "src/shaders/bin/hello-world.slang.main.spv";
   const auto helloWorldShader =
       std::make_unique<Shader>(device.get(), shaderPath);
   auto stage = helloWorldShader->getShaderStageCreateInfo(
@@ -213,6 +213,54 @@ void Renderer::initCompute()
 
   compute->pipelines["compute1"] =
       device->createComputePipeline(stage, compute->pipelineLayout);
+}
+
+void Renderer::initGraphics()
+{
+  std::vector<vk::DescriptorPoolSize> graphicsDescriptorPoolSizes = {
+      {vk::DescriptorPoolSize {vk::DescriptorType::eUniformBuffer, 2},
+       vk::DescriptorPoolSize {vk::DescriptorType::eStorageBuffer, 3},
+       vk::DescriptorPoolSize {vk::DescriptorType::eCombinedImageSampler, 2}}};
+
+  auto graphicsDescriptorPool =
+      device->createDescriptorPool(graphicsDescriptorPoolSizes, 1);
+  descriptorPools["graphics"] = graphicsDescriptorPool;
+
+  // Create graphics executor
+  std::vector<vk::DescriptorSetLayoutBinding> descriptorSetLayoutBindings = {
+      vk::DescriptorSetLayoutBinding {0,
+                                      vk::DescriptorType::eCombinedImageSampler,
+                                      1,
+                                      vk::ShaderStageFlagBits::eFragment},
+      vk::DescriptorSetLayoutBinding {1,
+                                      vk::DescriptorType::eCombinedImageSampler,
+                                      1,
+                                      vk::ShaderStageFlagBits::eFragment},
+      vk::DescriptorSetLayoutBinding {2,
+                                      vk::DescriptorType::eUniformBuffer,
+                                      1,
+                                      vk::ShaderStageFlagBits::eVertex}};
+
+  graphics = std::make_unique<Graphics>(
+      device->handle,
+      device->queueFamilyIndices.graphicsFamily.value(),
+      descriptorPools["graphics"],
+      descriptorSetLayoutBindings);
+
+  std::string vertShaderPath = "src/shaders/bin/graphics.slang.vertMain.spv";
+  const auto vertShader =
+      std::make_unique<Shader>(device.get(), vertShaderPath);
+  auto vertStage =
+      vertShader->getShaderStageCreateInfo(vk::ShaderStageFlagBits::eVertex);
+
+  std::string fragShaderPath = "src/shaders/bin/graphics.slang.fragMain.spv";
+  const auto fragShader =
+      std::make_unique<Shader>(device.get(), fragShaderPath);
+  auto fragStage =
+      fragShader->getShaderStageCreateInfo(vk::ShaderStageFlagBits::eFragment);
+
+  graphics->pipelines["graphics1"] = device->createGraphicsPipeline(
+      vertStage, fragStage, graphics->pipelineLayout);
 }
 
 void Renderer::update() const
@@ -322,35 +370,6 @@ void Renderer::update() const
     fmt::print("({},{}), ", item.x, item.y);
   }
   fmt::print("\n");
-}
-
-void Renderer::initGraphics()
-{
-  std::vector<vk::DescriptorPoolSize> graphicsDescriptorPoolSizes = {
-      {vk::DescriptorPoolSize {vk::DescriptorType::eUniformBuffer, 2},
-       vk::DescriptorPoolSize {vk::DescriptorType::eStorageBuffer, 3},
-       vk::DescriptorPoolSize {vk::DescriptorType::eCombinedImageSampler, 2}}};
-
-  auto graphicsDescriptorPool =
-      device->createDescriptorPool(graphicsDescriptorPoolSizes, 1);
-  descriptorPools["graphics"] = graphicsDescriptorPool;
-
-  // Create graphics executor
-  std::vector<vk::DescriptorSetLayoutBinding> descriptorSetLayoutBindings = {
-      vk::DescriptorSetLayoutBinding {0,
-                                      vk::DescriptorType::eStorageBuffer,
-                                      1,
-                                      vk::ShaderStageFlagBits::eCompute},
-      vk::DescriptorSetLayoutBinding {1,
-                                      vk::DescriptorType::eStorageBuffer,
-                                      1,
-                                      vk::ShaderStageFlagBits::eCompute}};
-
-  graphics = std::make_unique<Graphics>(
-      device->handle,
-      device->queueFamilyIndices.graphicsFamily.value(),
-      descriptorPools["graphics"],
-      descriptorSetLayoutBindings);
 }
 
 void Renderer::draw() const {}

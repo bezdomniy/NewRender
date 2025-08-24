@@ -38,12 +38,12 @@ vk::ShaderModule Shader::createShaderModule(const std::vector<char>& code)
 }
 
 vk::PipelineShaderStageCreateInfo Shader::getShaderStageCreateInfo(
-    vk::ShaderStageFlagBits stage)
+    vk::ShaderStageFlagBits stage, const std::string& entryPoint)
 {
   vk::PipelineShaderStageCreateInfo shaderStage;
   shaderStage.stage = stage;
   shaderStage.module = shaderModule;
-  shaderStage.pName = "main";
+  shaderStage.pName = entryPoint.c_str();
   return shaderStage;
 }
 

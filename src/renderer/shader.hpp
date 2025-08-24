@@ -17,7 +17,7 @@ public:
   vk::ShaderModule getShaderModule() const { return shaderModule; }
 
   vk::PipelineShaderStageCreateInfo getShaderStageCreateInfo(
-      vk::ShaderStageFlagBits stage);
+      vk::ShaderStageFlagBits stage, const std::string& entryPoint = "main");
 
 private:
   Device* device;
