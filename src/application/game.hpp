@@ -3,6 +3,11 @@
 
 #include <glm/glm.hpp>
 
+struct GameVertex
+{
+  glm::vec2 pos;
+};
+
 class Game
 {
 public:
@@ -10,7 +15,7 @@ public:
   ~Game() = default;
 
   // temporary
-  std::vector<glm::vec2> vertices;
+  std::vector<GameVertex> vertices;
 
 private:
 };

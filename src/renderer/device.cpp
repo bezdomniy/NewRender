@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <set>
 #include <vector>
 
@@ -115,28 +116,132 @@ vk::Pipeline Device::createComputePipeline(
 vk::Pipeline Device::createGraphicsPipeline(
     vk::PipelineShaderStageCreateInfo& vertexStage,
     vk::PipelineShaderStageCreateInfo& fragmentStage,
+    vk::PipelineVertexInputStateCreateInfo vertexInputInfo,
+    vk::RenderPass renderPass,
     vk::PipelineLayout& pipelineLayout,
     vk::PipelineCache pipelineCache) const
 {
   std::array<vk::PipelineShaderStageCreateInfo, 2>
       pipelineShaderStageCreateInfos = {vertexStage, fragmentStage};
 
-  vk::GraphicsPipelineCreateInfo graphics_pipeline_create_info {
+  // Additive blending
+  vk::PipelineColorBlendAttachmentState blendAttachmentState(
+      true,
+      vk::BlendFactor::eOne,
+      vk::BlendFactor::eOne,
+      vk::BlendOp::eAdd,
+      vk::BlendFactor::eSrcAlpha,
+      vk::BlendFactor::eDstAlpha,
+      vk::BlendOp::eAdd,
+      vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG
+          | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA);
+
+  vk::PipelineColorBlendStateCreateInfo colorBlendState(
+      vk::PipelineColorBlendStateCreateFlags(),
+      false,
+      vk::LogicOp::eCopy,
+      blendAttachmentState,
+      {0.0f, 0.0f, 0.0f, 0.0f});
+
+  vk::PipelineDepthStencilStateCreateInfo depthStencilState;
+  depthStencilState.depthTestEnable = false;
+  depthStencilState.depthWriteEnable = false;
+  depthStencilState.depthCompareOp = vk::CompareOp::eAlways;
+  depthStencilState.back.compareOp = vk::CompareOp::eAlways;
+
+  //  pipeline_cache,
+  //  shader_stages,
+  //  vertex_input_state,
+  //  vk::PrimitiveTopology::ePointList,
+  //  0,
+  //  vk::PolygonMode::eFill,
+  //  vk::CullModeFlagBits::eNone,
+  //  vk::FrontFace::eCounterClockwise,
+  //  {blend_attachment_state},
+  //  depth_stencil_state,
+  //  graphics.pipeline_layout,
+  //  render_pass);
+
+  vk::PipelineInputAssemblyStateCreateInfo inputAssemblyState(
+      vk::PipelineInputAssemblyStateCreateFlags(),
+      vk::PrimitiveTopology::ePointList);
+
+  vk::PipelineTessellationStateCreateInfo tessellationState(
+      vk::PipelineTessellationStateCreateFlags(), 0);
+
+  vk::PipelineViewportStateCreateInfo viewportState(
+      vk::PipelineViewportStateCreateFlags(), 1, nullptr, 1, nullptr);
+
+  // vk::PipelineRasterizationStateCreateInfo rasterization_state {
+  //     .polygonMode = polygon_mode,
+  //     .cullMode = cull_mode,
+  //     .frontFace = front_face,
+  //     .lineWidth = 1.0f};
+
+  vk::PipelineRasterizationStateCreateInfo rasterizationState(
+      vk::PipelineRasterizationStateCreateFlags(),
+      false,
+      false,
+      vk::PolygonMode::eFill,
+      vk::CullModeFlagBits::eNone,
+      vk::FrontFace::eCounterClockwise,
+      false,
+      0.0f,
+      0.0f,
+      0.0f,
+      1.0f);
+
+  // vk::PipelineMultisampleStateCreateInfo multisample_state {
+  //     .rasterizationSamples = vk::SampleCountFlagBits::e1};
+
+  vk::PipelineMultisampleStateCreateInfo multisampleState(
+      vk::PipelineMultisampleStateCreateFlags(), vk::SampleCountFlagBits::e1);
+
+  // vk::PipelineColorBlendStateCreateInfo color_blend_state {
+  //     .attachmentCount =
+  //     static_cast<uint32_t>(blend_attachment_states.size()), .pAttachments =
+  //     blend_attachment_states.data()};
+
+  vk::PipelineColorBlendStateCreateInfo colorBlendStateCreateInfo(
+      vk::PipelineColorBlendStateCreateFlags(),
+      false,
+      vk::LogicOp::eCopy,
+      1,
+      &blendAttachmentState,
+      {0.0f, 0.0f, 0.0f, 0.0f});
+
+  // std::array<vk::DynamicState, 2> dynamic_state_enables = {
+  //     vk::DynamicState::eViewport, vk::DynamicState::eScissor};
+
+  std::array<vk::DynamicState, 2> dynamicStateEnables(
+      {vk::DynamicState::eViewport, vk::DynamicState::eScissor});
+
+  // vk::PipelineDynamicStateCreateInfo dynamic_state {
+  //     .dynamicStateCount =
+  //     static_cast<uint32_t>(dynamic_state_enables.size()), .pDynamicStates =
+  //     dynamic_state_enables.data()};
+
+  vk::PipelineDynamicStateCreateInfo dynamicState(
+      vk::PipelineDynamicStateCreateFlags(),
+      static_cast<uint32_t>(dynamicStateEnables.size()),
+      dynamicStateEnables.data());
+
+  vk::GraphicsPipelineCreateInfo graphics_pipeline_create_info(
       vk::PipelineCreateFlags(),
       pipelineShaderStageCreateInfos,
-      nullptr,  // pVertexInputState
-      nullptr,  // pInputAssemblyState
-      nullptr,  // pTessellationState
-      nullptr,  // pViewportState
-      nullptr,  // pRasterizationState
-      nullptr,  // pMultisampleState
-      nullptr,  // pDepthStencilState
-      nullptr,  // pColorBlendState
-      nullptr,  // pDynamicState,
+      &vertexInputInfo,  // pVertexInputState
+      &inputAssemblyState,  // pInputAssemblyState
+      &tessellationState,  // pTessellationState
+      &viewportState,  // pViewportState
+      &rasterizationState,  // pRasterizationState
+      &multisampleState,  // pMultisampleState
+      &depthStencilState,  // pDepthStencilState
+      &colorBlendState,  // pColorBlendState
+      &dynamicState,  // pDynamicState,
       pipelineLayout,
-      nullptr,  // renderPass
+      renderPass,  // renderPass
       0,  // subpass
-      nullptr};
+      nullptr);
 
   vk::Result result;
   vk::Pipeline pipeline;
@@ -145,6 +250,148 @@ vk::Pipeline Device::createGraphicsPipeline(
   assert(result == vk::Result::eSuccess);
 
   return pipeline;
+}
+
+vk::RenderPass Device::createRenderPass() const
+{
+  // std::array<vk::AttachmentDescription, 2> attachments {
+  //     {// Color attachment
+  //      {.format = get_render_context().get_format(),
+  //       .samples = vk::SampleCountFlagBits::e1,
+  //       .loadOp = vk::AttachmentLoadOp::eClear,
+  //       .storeOp = vk::AttachmentStoreOp::eStore,
+  //       .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
+  //       .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
+  //       .initialLayout = vk::ImageLayout::eUndefined,
+  //       .finalLayout = vk::ImageLayout::ePresentSrcKHR},
+  //      // Depth attachment
+  //      {.format = depth_format,
+  //       .samples = vk::SampleCountFlagBits::e1,
+  //       .loadOp = vk::AttachmentLoadOp::eClear,
+  //       .storeOp = vk::AttachmentStoreOp::eDontCare,
+  //       .stencilLoadOp = vk::AttachmentLoadOp::eClear,
+  //       .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
+  //       .initialLayout = vk::ImageLayout::eUndefined,
+  //       .finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal}}};
+
+  std::array<vk::AttachmentDescription, 2> attachments {
+      {// Color attachment
+       {vk::AttachmentDescriptionFlags(),
+        vk::Format::eB8G8R8A8Unorm,  // TODO: get from swapchain
+        vk::SampleCountFlagBits::e1,
+        vk::AttachmentLoadOp::eClear,
+        vk::AttachmentStoreOp::eStore,
+        vk::AttachmentLoadOp::eDontCare,
+        vk::AttachmentStoreOp::eDontCare,
+        vk::ImageLayout::eUndefined,
+        vk::ImageLayout::ePresentSrcKHR},
+       // Depth attachment
+       {vk::AttachmentDescriptionFlags(),
+        vk::Format::eD32Sfloat,  // TODO: make configurables
+        vk::SampleCountFlagBits::e1,
+        vk::AttachmentLoadOp::eClear,
+        vk::AttachmentStoreOp::eDontCare,
+        vk::AttachmentLoadOp::eDontCare,
+        vk::AttachmentStoreOp::eDontCare,
+        vk::ImageLayout::eUndefined,
+        vk::ImageLayout::eDepthStencilAttachmentOptimal}}};
+
+  vk::AttachmentReference color_reference {
+      0, vk::ImageLayout::eColorAttachmentOptimal};
+
+  vk::AttachmentReference depth_reference {
+      1, vk::ImageLayout::eDepthStencilAttachmentOptimal};
+
+  // vk::SubpassDescription subpass_description {
+  //     .pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
+  //     .colorAttachmentCount = 1,
+  //     .pColorAttachments = &color_reference,
+  //     .pDepthStencilAttachment = &depth_reference};
+
+  vk::SubpassDescription subpassDescription(vk::SubpassDescriptionFlags(),
+                                            vk::PipelineBindPoint::eGraphics,
+                                            0,
+                                            nullptr,
+                                            1,
+                                            &color_reference,
+                                            nullptr,
+                                            &depth_reference,
+                                            0,
+                                            nullptr);
+
+  // Subpass dependencies for layout transitions
+  // std::array<vk::SubpassDependency, 2> dependencies {{
+  //     {.srcSubpass = vk::SubpassExternal,
+  //      .dstSubpass = 0,
+  //      .srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe,
+  //      .dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput
+  //          | vk::PipelineStageFlagBits::eEarlyFragmentTests
+  //          | vk::PipelineStageFlagBits::eLateFragmentTests,
+  //      .srcAccessMask = vk::AccessFlagBits::eNoneKHR,
+  //      .dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead
+  //          | vk::AccessFlagBits::eColorAttachmentWrite
+  //          | vk::AccessFlagBits::eDepthStencilAttachmentRead
+  //          | vk::AccessFlagBits::eDepthStencilAttachmentWrite,
+  //      .dependencyFlags = vk::DependencyFlagBits::eByRegion},
+  //     {.srcSubpass = 0,
+  //      .dstSubpass = vk::SubpassExternal,
+  //      .srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput
+  //          | vk::PipelineStageFlagBits::eEarlyFragmentTests
+  //          | vk::PipelineStageFlagBits::eLateFragmentTests,
+  //      .dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe,
+  //      .srcAccessMask = vk::AccessFlagBits::eColorAttachmentRead
+  //          | vk::AccessFlagBits::eColorAttachmentWrite
+  //          | vk::AccessFlagBits::eDepthStencilAttachmentRead
+  //          | vk::AccessFlagBits::eDepthStencilAttachmentWrite,
+  //      .dstAccessMask = vk::AccessFlagBits::eMemoryRead,
+  //      .dependencyFlags = vk::DependencyFlagBits::eByRegion},
+  // }};
+
+  std::array<vk::SubpassDependency, 2> dependencies {{
+      {vk::SubpassExternal,
+       0,
+       vk::PipelineStageFlagBits::eBottomOfPipe,
+       vk::PipelineStageFlagBits::eColorAttachmentOutput
+           | vk::PipelineStageFlagBits::eEarlyFragmentTests
+           | vk::PipelineStageFlagBits::eLateFragmentTests,
+       vk::AccessFlagBits::eNoneKHR,
+       vk::AccessFlagBits::eColorAttachmentRead
+           | vk::AccessFlagBits::eColorAttachmentWrite
+           | vk::AccessFlagBits::eDepthStencilAttachmentRead
+           | vk::AccessFlagBits::eDepthStencilAttachmentWrite,
+       vk::DependencyFlagBits::eByRegion},
+      {0,
+       vk::SubpassExternal,
+       vk::PipelineStageFlagBits::eColorAttachmentOutput
+           | vk::PipelineStageFlagBits::eEarlyFragmentTests
+           | vk::PipelineStageFlagBits::eLateFragmentTests,
+       vk::PipelineStageFlagBits::eBottomOfPipe,
+       vk::AccessFlagBits::eColorAttachmentRead
+           | vk::AccessFlagBits::eColorAttachmentWrite
+           | vk::AccessFlagBits::eDepthStencilAttachmentRead
+           | vk::AccessFlagBits::eDepthStencilAttachmentWrite,
+       vk::AccessFlagBits::eMemoryRead,
+       vk::DependencyFlagBits::eByRegion},
+  }};
+
+  // vk::RenderPassCreateInfo render_pass_create_info {
+  //     .attachmentCount = static_cast<uint32_t>(attachments.size()),
+  //     .pAttachments = attachments.data(),
+  //     .subpassCount = 1,
+  //     .pSubpasses = &subpassDescription,
+  //     .dependencyCount = static_cast<uint32_t>(dependencies.size()),
+  //     .pDependencies = dependencies.data()};
+
+  vk::RenderPassCreateInfo renderPassCreateInfo(
+      vk::RenderPassCreateFlags(),
+      static_cast<uint32_t>(attachments.size()),
+      attachments.data(),
+      1,
+      &subpassDescription,
+      static_cast<uint32_t>(dependencies.size()),
+      dependencies.data());
+
+  return handle.createRenderPass(renderPassCreateInfo);
 }
 
 vk::SwapchainKHR Device::createSwapchain()

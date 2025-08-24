@@ -6,8 +6,7 @@
 
 struct VSInput
 {
-    float4 Pos;
-    float4 Vel;
+    float2 Pos;
 };
 
 struct VSOutput
@@ -34,16 +33,16 @@ ConstantBuffer<UBO> ubo;
 VSOutput vertMain(VSInput input)
 {
     VSOutput output;
-    const float spriteSize = 0.005 * input.Pos.w; // Point size influenced by mass (stored in input.Pos.w);
+    // const float spriteSize = 0.005 * input.Pos.w; // Point size influenced by mass (stored in input.Pos.w);
 
-    float4 eyePos = mul(ubo.modelview, float4(input.Pos.x, input.Pos.y, input.Pos.z, 1.0));
-    float4 projectedCorner = mul(ubo.projection, float4(0.5 * spriteSize, 0.5 * spriteSize, eyePos.z, eyePos.w));
-    output.PSize = output.PointSize = clamp(ubo.screendim.x * projectedCorner.x / projectedCorner.w, 1.0, 128.0);
+    // float4 eyePos = mul(ubo.modelview, float4(input.Pos.x, input.Pos.y, input.Pos.z, 1.0));
+    // float4 projectedCorner = mul(ubo.projection, float4(0.5 * spriteSize, 0.5 * spriteSize, eyePos.z, eyePos.w));
+    // output.PSize = output.PointSize = clamp(ubo.screendim.x * projectedCorner.x / projectedCorner.w, 1.0, 128.0);
 
-    output.Pos = mul(ubo.projection, eyePos);
-    output.CenterPos = ((output.Pos.xy / output.Pos.w) + 1.0) * 0.5 * ubo.screendim;
+    // output.Pos = mul(ubo.projection, eyePos);
+    // output.CenterPos = ((output.Pos.xy / output.Pos.w) + 1.0) * 0.5 * ubo.screendim;
 
-    output.GradientPos = input.Vel.w;
+    // output.GradientPos = input.Vel.w;
     return output;
 }
 

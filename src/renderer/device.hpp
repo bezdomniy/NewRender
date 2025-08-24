@@ -32,6 +32,8 @@ public:
     }
   };
 
+  vk::RenderPass createRenderPass() const;
+
   vk::DescriptorPool createDescriptorPool(
       std::vector<vk::DescriptorPoolSize>& poolSizes, uint32_t maxSets);
 
@@ -43,6 +45,8 @@ public:
   vk::Pipeline createGraphicsPipeline(
       vk::PipelineShaderStageCreateInfo& vertexStage,
       vk::PipelineShaderStageCreateInfo& fragmentStage,
+      vk::PipelineVertexInputStateCreateInfo vertexInputInfo,
+      vk::RenderPass renderPass,
       vk::PipelineLayout& pipelineLayout,
       vk::PipelineCache pipelineCache = nullptr) const;
 

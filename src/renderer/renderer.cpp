@@ -259,8 +259,34 @@ void Renderer::initGraphics()
   auto fragStage =
       fragShader->getShaderStageCreateInfo(vk::ShaderStageFlagBits::eFragment);
 
-  graphics->pipelines["graphics1"] = device->createGraphicsPipeline(
-      vertStage, fragStage, graphics->pipelineLayout);
+  vk::VertexInputBindingDescription vertexInputBindingDescription(
+      0, sizeof(game.vertices.at(0)), vk::VertexInputRate::eVertex);
+  std::array<vk::VertexInputAttributeDescription, 2> vertexInputAttributes = {{
+      {0,
+       0,
+       vk::Format::eR32G32B32A32Sfloat,
+       offsetof(typeof(game.vertices.at(0)), pos)},  // Location 0 : Position
+      //  {1,
+      //   0,
+      //   vk::Format::eR32G32B32A32Sfloat,
+      //   offsetof(Particle, vel)}
+  }};  // Location 1 : Velocity
+
+  vk::PipelineVertexInputStateCreateInfo vertexInputBindingInfo(
+      vk::PipelineVertexInputStateCreateFlags(),
+      1,
+      &vertexInputBindingDescription,
+      static_cast<uint32_t>(vertexInputAttributes.size()),
+      vertexInputAttributes.data());
+
+  renderPass = device->createRenderPass();  // TODO should device own this??
+
+  graphics->pipelines["graphics1"] =
+      device->createGraphicsPipeline(vertStage,
+                                     fragStage,
+                                     vertexInputBindingInfo,
+                                     renderPass,
+                                     graphics->pipelineLayout);
 }
 
 void Renderer::update() const
@@ -389,6 +415,8 @@ void Renderer::cleanup()
   for (const auto& descriptorPool : descriptorPools | std::views::values) {
     device->handle.destroyDescriptorPool(descriptorPool);
   }
+
+  device->handle.destroyRenderPass(renderPass);
 
   // device->handle.destroyCommandPool(commandPool);
   for (const auto& imageView : imagesViews) {

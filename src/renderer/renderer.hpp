@@ -63,6 +63,7 @@ private:
   vk::SwapchainKHR swapchain {VK_NULL_HANDLE};
   // vk::Format swapchainImageFormat;
   vk::Extent2D swapchainExtent;
+  vk::RenderPass renderPass {VK_NULL_HANDLE};
   std::vector<vk::Image> images;
   std::vector<vk::ImageView> imagesViews;
   std::unordered_map<std::string, DeviceBuffer> deviceBuffers;
