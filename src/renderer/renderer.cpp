@@ -44,7 +44,7 @@ Renderer::~Renderer()
 
   while (true) {
     update();
-    // draw();
+    draw();
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
@@ -95,7 +95,7 @@ void Renderer::initVulkan()
 
   vmaCreateAllocator(&allocatorInfo, &allocator);
 
-  swapchain = device->createSwapchain();
+  std::tie(swapchain, swapchainExtent) = device->createSwapchain();
   images = device->getSwapchainImages(swapchain);
   imagesViews = device->getImageViews(images);
 }
@@ -264,7 +264,7 @@ void Renderer::initGraphics()
   std::array<vk::VertexInputAttributeDescription, 1> vertexInputAttributes = {{
       {0,
        0,
-       vk::Format::eR32G32B32A32Sfloat,
+       vk::Format::eR32G32Sfloat,
        offsetof(typeof(game.vertices.at(0)), pos)},  // Location 0 : Position
       //  {1,
       //   0,
@@ -392,10 +392,94 @@ void Renderer::update() const
   fmt::print("\n");
 }
 
-void Renderer::draw() const {}
+void Renderer::draw()
+{
+  vk::Semaphore acquireSemaphore;
+  if (recycledSemaphores.empty()) {
+    acquireSemaphore = device->handle.createSemaphore({});
+  } else {
+    acquireSemaphore = recycledSemaphores.back();
+    recycledSemaphores.pop_back();
+  }
+
+  vk::Result result;
+  std::tie(result, currentImageIndex) = device->handle.acquireNextImageKHR(
+      swapchain, UINT64_MAX, acquireSemaphore, {});
+
+  if (result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR) {
+    throw std::runtime_error("Failed to acquire swap chain image!");
+  }
+
+  auto colorAttachmentInfo =
+      vk::RenderingAttachmentInfoKHR()
+          .setImageView(imagesViews[currentImageIndex])
+          .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
+          .setLoadOp(vk::AttachmentLoadOp::eClear)
+          .setStoreOp(vk::AttachmentStoreOp::eStore)
+          .setClearValue(vk::ClearValue(vk::ClearColorValue(
+              std::array<float, 4> {0.0f, 0.0f, 0.0f, 1.0f})));
+
+  auto renderingInfo = vk::RenderingInfoKHR()
+                           .setRenderArea({{0, 0}, swapchainExtent})
+                           .setLayerCount(1)
+                           .setColorAttachmentCount(1)
+                           .setPColorAttachments(&colorAttachmentInfo);
+
+  graphics->commandBuffer.begin(vk::CommandBufferBeginInfo());
+
+  graphics->insertImageMemoryBarrier(
+      images[currentImageIndex],
+      vk::AccessFlagBits::eNone,
+      vk::AccessFlagBits::eColorAttachmentWrite,
+      vk::ImageLayout::eUndefined,
+      vk::ImageLayout::eColorAttachmentOptimal,
+      vk::PipelineStageFlagBits::eColorAttachmentOutput,
+      vk::PipelineStageFlagBits::eColorAttachmentOutput,
+      vk::ImageSubresourceRange {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1});
+
+  graphics->commandBuffer.beginRendering(renderingInfo);
+
+  vk::Viewport viewport(0.0f,
+                        0.0f,
+                        static_cast<float>(swapchainExtent.width),
+                        static_cast<float>(swapchainExtent.height),
+                        0.0f,
+                        1.0f);
+
+  vk::Rect2D scissor({0, 0}, swapchainExtent);
+  graphics->commandBuffer.setViewport(0, viewport);
+  graphics->commandBuffer.setScissor(0, scissor);
+
+  graphics->commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+                                             graphics->pipelineLayout,
+                                             0,
+                                             graphics->descriptorSet,
+                                             {});
+
+  graphics->commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
+                                       graphics->pipelines.at("graphics1"));
+
+  graphics->commandBuffer.endRendering();
+
+  graphics->insertImageMemoryBarrier(
+      images[currentImageIndex],
+      vk::AccessFlagBits::eColorAttachmentWrite,
+      vk::AccessFlagBits::eNone,
+      vk::ImageLayout::eColorAttachmentOptimal,
+      vk::ImageLayout::ePresentSrcKHR,
+      vk::PipelineStageFlagBits::eColorAttachmentOutput,
+      vk::PipelineStageFlagBits::eBottomOfPipe,
+      vk::ImageSubresourceRange {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1});
+
+  graphics->commandBuffer.end();
+}
 
 void Renderer::cleanup()
 {
+  for (const auto& semaphore : recycledSemaphores) {
+    device->handle.destroySemaphore(semaphore);
+  }
+
   device->computeQueue.waitIdle();
   device->graphicsQueue.waitIdle();
   hostBuffers.clear();

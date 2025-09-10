@@ -19,14 +19,6 @@ private:
     std::vector<vk::PresentModeKHR> presentModes;
   };
 
-public:
-  explicit Device(vk::Instance& instance);
-  Device(vk::Instance& instance, vk::SurfaceKHR* surface);
-  ~Device();
-  void destroy() const;
-
-  Compute createCompute();
-
   struct QueueFamilyIndices
   {
     std::optional<uint32_t> graphicsFamily;
@@ -39,6 +31,14 @@ public:
           && computeFamily.has_value();
     }
   };
+
+public:
+  explicit Device(vk::Instance& instance);
+  Device(vk::Instance& instance, vk::SurfaceKHR* surface);
+  ~Device();
+  void destroy() const;
+
+  Compute createCompute();
 
   vk::DescriptorPool createDescriptorPool(
       std::vector<vk::DescriptorPoolSize>& poolSizes, uint32_t maxSets);
@@ -55,7 +55,7 @@ public:
       vk::PipelineLayout& pipelineLayout,
       vk::PipelineCache pipelineCache = nullptr) const;
 
-  vk::SwapchainKHR createSwapchain();
+  std::pair<vk::SwapchainKHR, vk::Extent2D> createSwapchain();
   std::vector<vk::Image> getSwapchainImages(vk::SwapchainKHR swapchain) const;
   std::vector<vk::ImageView> getImageViews(std::vector<vk::Image>& images);
 

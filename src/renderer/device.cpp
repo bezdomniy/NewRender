@@ -245,7 +245,7 @@ vk::Pipeline Device::createGraphicsPipeline(
   return pipeline;
 }
 
-vk::SwapchainKHR Device::createSwapchain()
+std::pair<vk::SwapchainKHR, vk::Extent2D> Device::createSwapchain()
 {
   SwapChainSupportDetails swapChainSupport =
       querySwapChainSupport(physicalDevice);
@@ -288,7 +288,7 @@ vk::SwapchainKHR Device::createSwapchain()
     createInfo.pQueueFamilyIndices = queueFamilyIndices;
   }
 
-  return handle.createSwapchainKHR(createInfo);
+  return std::pair {handle.createSwapchainKHR(createInfo), extent};
 }
 
 std::vector<vk::Image> Device::getSwapchainImages(

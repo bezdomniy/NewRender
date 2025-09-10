@@ -17,6 +17,8 @@
 #include "device.hpp"
 #include "graphics.hpp"
 #include "vk_mem_alloc.h"
+#include "vulkan/vulkan_enums.hpp"
+#include "vulkan/vulkan_structs.hpp"
 
 class Renderer
 {
@@ -62,10 +64,14 @@ private:
 
   vk::SwapchainKHR swapchain {VK_NULL_HANDLE};
   vk::Extent2D swapchainExtent;
+  uint32_t currentImageIndex {0};
+  // uint32_t currentBuffer {0};  // TODO: not used yet
   std::vector<vk::Image> images;
   std::vector<vk::ImageView> imagesViews;
   std::unordered_map<std::string, DeviceBuffer> deviceBuffers;
   std::unordered_map<std::string, HostBuffer> hostBuffers;
+
+  std::vector<vk::Semaphore> recycledSemaphores;
 
   std::unique_ptr<Device> device = nullptr;
   std::unique_ptr<Compute> compute = nullptr;
@@ -79,7 +85,7 @@ private:
   void initCompute();
   void initGraphics();
   void update() const;
-  void draw() const;
+  void draw();
   void cleanup();
 
   void createInstance();

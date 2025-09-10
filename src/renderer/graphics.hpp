@@ -21,5 +21,16 @@ public:
   Graphics& operator=(const Graphics&) = delete;  // Disable copy assignment
   Graphics(Graphics&&) = delete;  // Disable move constructor
   Graphics& operator=(Graphics&&) = delete;  // Disable move assignment
+
+  void insertImageMemoryBarrier(
+      vk::Image image,
+      vk::AccessFlags srcAccessMask,
+      vk::AccessFlags dstAccessMask,
+      vk::ImageLayout oldImageLayout,
+      vk::ImageLayout newImageLayout,
+      vk::PipelineStageFlags srcStageMask,
+      vk::PipelineStageFlags dstStageMask,
+      vk::ImageSubresourceRange subresourceRange) const;
+
 private:
 };
