@@ -7,48 +7,26 @@
 #include <vulkan/vulkan_handles.hpp>
 #include <vulkan/vulkan_structs.hpp>
 
+#include "vulkan/vulkan.hpp"
+#include "vulkan/vulkan_core.h"
+#include "vulkan/vulkan_enums.hpp"
+
 Device::Device(vk::Instance& instance)
-    : instance(instance)
+    : Device(instance, nullptr)
 {
-  std::vector<const char*> enabledDeviceExtensions {};
-  pickPhysicalDevice(enabledDeviceExtensions, false);
-
-  queueFamilyIndices = findQueueFamilies(physicalDevice, false);
-
-  memoryProperties = physicalDevice.getMemoryProperties();
-
-  // create a Device
-  float queuePriority = 0.0f;
-  vk::DeviceQueueCreateInfo deviceQueueCreateInfo(
-      vk::DeviceQueueCreateFlags(),
-      queueFamilyIndices.computeFamily.value(),
-      1,
-      &queuePriority);
-
-#ifdef __APPLE__
-#  ifndef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
-#    define VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME "VK_KHR_portability_subset"
-#  endif
-
-  enabledDeviceExtensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
-#endif
-
-  vk::DeviceCreateInfo deviceCreateInfo(vk::DeviceCreateFlags(),
-                                        deviceQueueCreateInfo,
-                                        {},
-                                        enabledDeviceExtensions);
-
-  handle = physicalDevice.createDevice(deviceCreateInfo);
-
-  handle.getQueue(queueFamilyIndices.computeFamily.value(), 0, &computeQueue);
 }
 
 Device::Device(vk::Instance& instance, vk::SurfaceKHR* surface)
     : instance(instance)
     , surface(surface)
 {
-  std::vector<const char*> enabledDeviceExtensions {
-      VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+  std::vector<const char*> enabledDeviceExtensions;
+
+  if (surface) {
+    enabledDeviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+                               VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME};
+  }
+
   pickPhysicalDevice(enabledDeviceExtensions);
 
   queueFamilyIndices = findQueueFamilies(physicalDevice);
@@ -59,7 +37,8 @@ Device::Device(vk::Instance& instance, vk::SurfaceKHR* surface)
   float queuePriority = 0.0f;
   vk::DeviceQueueCreateInfo deviceQueueCreateInfo(
       vk::DeviceQueueCreateFlags(),
-      queueFamilyIndices.graphicsFamily.value(),
+      surface ? queueFamilyIndices.graphicsFamily.value()
+              : queueFamilyIndices.computeFamily.value(),
       1,
       &queuePriority);
 
@@ -71,16 +50,25 @@ Device::Device(vk::Instance& instance, vk::SurfaceKHR* surface)
   enabledDeviceExtensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
 #endif
 
+  vk::PhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeature(
+      vk::True);
+
   vk::DeviceCreateInfo deviceCreateInfo(vk::DeviceCreateFlags(),
                                         deviceQueueCreateInfo,
                                         {},
-                                        enabledDeviceExtensions);
+                                        enabledDeviceExtensions,
+                                        {},
+                                        &dynamicRenderingFeature);
 
   handle = physicalDevice.createDevice(deviceCreateInfo);
 
-  handle.getQueue(queueFamilyIndices.graphicsFamily.value(), 0, &graphicsQueue);
-  handle.getQueue(queueFamilyIndices.presentFamily.value(), 0, &presentQueue);
   handle.getQueue(queueFamilyIndices.computeFamily.value(), 0, &computeQueue);
+
+  if (surface) {
+    handle.getQueue(
+        queueFamilyIndices.graphicsFamily.value(), 0, &graphicsQueue);
+    handle.getQueue(queueFamilyIndices.presentFamily.value(), 0, &presentQueue);
+  }
 }
 
 Device::~Device() = default;
@@ -117,7 +105,6 @@ vk::Pipeline Device::createGraphicsPipeline(
     vk::PipelineShaderStageCreateInfo& vertexStage,
     vk::PipelineShaderStageCreateInfo& fragmentStage,
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo,
-    vk::RenderPass renderPass,
     vk::PipelineLayout& pipelineLayout,
     vk::PipelineCache pipelineCache) const
 {
@@ -226,6 +213,10 @@ vk::Pipeline Device::createGraphicsPipeline(
       static_cast<uint32_t>(dynamicStateEnables.size()),
       dynamicStateEnables.data());
 
+  vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo {};
+  pipelineRenderingCreateInfo.setColorAttachmentCount(1);
+  pipelineRenderingCreateInfo.setColorAttachmentFormats(surfaceFormat.format);
+
   vk::GraphicsPipelineCreateInfo graphics_pipeline_create_info(
       vk::PipelineCreateFlags(),
       pipelineShaderStageCreateInfos,
@@ -239,9 +230,11 @@ vk::Pipeline Device::createGraphicsPipeline(
       &colorBlendState,  // pColorBlendState
       &dynamicState,  // pDynamicState,
       pipelineLayout,
-      renderPass,  // renderPass
+      nullptr,  // renderPass
       0,  // subpass
-      nullptr);
+      nullptr,
+      {},
+      &pipelineRenderingCreateInfo);
 
   vk::Result result;
   vk::Pipeline pipeline;
@@ -252,153 +245,10 @@ vk::Pipeline Device::createGraphicsPipeline(
   return pipeline;
 }
 
-vk::RenderPass Device::createRenderPass() const
-{
-  // std::array<vk::AttachmentDescription, 2> attachments {
-  //     {// Color attachment
-  //      {.format = get_render_context().get_format(),
-  //       .samples = vk::SampleCountFlagBits::e1,
-  //       .loadOp = vk::AttachmentLoadOp::eClear,
-  //       .storeOp = vk::AttachmentStoreOp::eStore,
-  //       .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-  //       .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-  //       .initialLayout = vk::ImageLayout::eUndefined,
-  //       .finalLayout = vk::ImageLayout::ePresentSrcKHR},
-  //      // Depth attachment
-  //      {.format = depth_format,
-  //       .samples = vk::SampleCountFlagBits::e1,
-  //       .loadOp = vk::AttachmentLoadOp::eClear,
-  //       .storeOp = vk::AttachmentStoreOp::eDontCare,
-  //       .stencilLoadOp = vk::AttachmentLoadOp::eClear,
-  //       .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-  //       .initialLayout = vk::ImageLayout::eUndefined,
-  //       .finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal}}};
-
-  std::array<vk::AttachmentDescription, 2> attachments {
-      {// Color attachment
-       {vk::AttachmentDescriptionFlags(),
-        vk::Format::eB8G8R8A8Unorm,  // TODO: get from swapchain
-        vk::SampleCountFlagBits::e1,
-        vk::AttachmentLoadOp::eClear,
-        vk::AttachmentStoreOp::eStore,
-        vk::AttachmentLoadOp::eDontCare,
-        vk::AttachmentStoreOp::eDontCare,
-        vk::ImageLayout::eUndefined,
-        vk::ImageLayout::ePresentSrcKHR},
-       // Depth attachment
-       {vk::AttachmentDescriptionFlags(),
-        vk::Format::eD32Sfloat,  // TODO: make configurables
-        vk::SampleCountFlagBits::e1,
-        vk::AttachmentLoadOp::eClear,
-        vk::AttachmentStoreOp::eDontCare,
-        vk::AttachmentLoadOp::eDontCare,
-        vk::AttachmentStoreOp::eDontCare,
-        vk::ImageLayout::eUndefined,
-        vk::ImageLayout::eDepthStencilAttachmentOptimal}}};
-
-  vk::AttachmentReference color_reference {
-      0, vk::ImageLayout::eColorAttachmentOptimal};
-
-  vk::AttachmentReference depth_reference {
-      1, vk::ImageLayout::eDepthStencilAttachmentOptimal};
-
-  // vk::SubpassDescription subpass_description {
-  //     .pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
-  //     .colorAttachmentCount = 1,
-  //     .pColorAttachments = &color_reference,
-  //     .pDepthStencilAttachment = &depth_reference};
-
-  vk::SubpassDescription subpassDescription(vk::SubpassDescriptionFlags(),
-                                            vk::PipelineBindPoint::eGraphics,
-                                            0,
-                                            nullptr,
-                                            1,
-                                            &color_reference,
-                                            nullptr,
-                                            &depth_reference,
-                                            0,
-                                            nullptr);
-
-  // Subpass dependencies for layout transitions
-  // std::array<vk::SubpassDependency, 2> dependencies {{
-  //     {.srcSubpass = vk::SubpassExternal,
-  //      .dstSubpass = 0,
-  //      .srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe,
-  //      .dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput
-  //          | vk::PipelineStageFlagBits::eEarlyFragmentTests
-  //          | vk::PipelineStageFlagBits::eLateFragmentTests,
-  //      .srcAccessMask = vk::AccessFlagBits::eNoneKHR,
-  //      .dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead
-  //          | vk::AccessFlagBits::eColorAttachmentWrite
-  //          | vk::AccessFlagBits::eDepthStencilAttachmentRead
-  //          | vk::AccessFlagBits::eDepthStencilAttachmentWrite,
-  //      .dependencyFlags = vk::DependencyFlagBits::eByRegion},
-  //     {.srcSubpass = 0,
-  //      .dstSubpass = vk::SubpassExternal,
-  //      .srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput
-  //          | vk::PipelineStageFlagBits::eEarlyFragmentTests
-  //          | vk::PipelineStageFlagBits::eLateFragmentTests,
-  //      .dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe,
-  //      .srcAccessMask = vk::AccessFlagBits::eColorAttachmentRead
-  //          | vk::AccessFlagBits::eColorAttachmentWrite
-  //          | vk::AccessFlagBits::eDepthStencilAttachmentRead
-  //          | vk::AccessFlagBits::eDepthStencilAttachmentWrite,
-  //      .dstAccessMask = vk::AccessFlagBits::eMemoryRead,
-  //      .dependencyFlags = vk::DependencyFlagBits::eByRegion},
-  // }};
-
-  std::array<vk::SubpassDependency, 2> dependencies {{
-      {vk::SubpassExternal,
-       0,
-       vk::PipelineStageFlagBits::eBottomOfPipe,
-       vk::PipelineStageFlagBits::eColorAttachmentOutput
-           | vk::PipelineStageFlagBits::eEarlyFragmentTests
-           | vk::PipelineStageFlagBits::eLateFragmentTests,
-       vk::AccessFlagBits::eNoneKHR,
-       vk::AccessFlagBits::eColorAttachmentRead
-           | vk::AccessFlagBits::eColorAttachmentWrite
-           | vk::AccessFlagBits::eDepthStencilAttachmentRead
-           | vk::AccessFlagBits::eDepthStencilAttachmentWrite,
-       vk::DependencyFlagBits::eByRegion},
-      {0,
-       vk::SubpassExternal,
-       vk::PipelineStageFlagBits::eColorAttachmentOutput
-           | vk::PipelineStageFlagBits::eEarlyFragmentTests
-           | vk::PipelineStageFlagBits::eLateFragmentTests,
-       vk::PipelineStageFlagBits::eBottomOfPipe,
-       vk::AccessFlagBits::eColorAttachmentRead
-           | vk::AccessFlagBits::eColorAttachmentWrite
-           | vk::AccessFlagBits::eDepthStencilAttachmentRead
-           | vk::AccessFlagBits::eDepthStencilAttachmentWrite,
-       vk::AccessFlagBits::eMemoryRead,
-       vk::DependencyFlagBits::eByRegion},
-  }};
-
-  // vk::RenderPassCreateInfo render_pass_create_info {
-  //     .attachmentCount = static_cast<uint32_t>(attachments.size()),
-  //     .pAttachments = attachments.data(),
-  //     .subpassCount = 1,
-  //     .pSubpasses = &subpassDescription,
-  //     .dependencyCount = static_cast<uint32_t>(dependencies.size()),
-  //     .pDependencies = dependencies.data()};
-
-  vk::RenderPassCreateInfo renderPassCreateInfo(
-      vk::RenderPassCreateFlags(),
-      static_cast<uint32_t>(attachments.size()),
-      attachments.data(),
-      1,
-      &subpassDescription,
-      static_cast<uint32_t>(dependencies.size()),
-      dependencies.data());
-
-  return handle.createRenderPass(renderPassCreateInfo);
-}
-
 vk::SwapchainKHR Device::createSwapchain()
 {
   SwapChainSupportDetails swapChainSupport =
       querySwapChainSupport(physicalDevice);
-
   vk::SurfaceFormatKHR surfaceFormat =
       chooseSwapSurfaceFormat(swapChainSupport.formats);
   vk::PresentModeKHR presentMode =
@@ -451,11 +301,8 @@ std::vector<vk::ImageView> Device::getImageViews(std::vector<vk::Image>& images)
 {
   SwapChainSupportDetails swapChainSupport =
       querySwapChainSupport(physicalDevice);
-
   vk::SurfaceFormatKHR surfaceFormat =
       chooseSwapSurfaceFormat(swapChainSupport.formats);
-
-  auto swapchainImageFormat = surfaceFormat.format;
 
   std::vector<vk::ImageView> imagesViews;
   imagesViews.resize(images.size());
@@ -464,7 +311,7 @@ std::vector<vk::ImageView> Device::getImageViews(std::vector<vk::Image>& images)
         vk::ImageViewCreateFlags(),
         images[i],
         vk::ImageViewType::e2D,
-        swapchainImageFormat,
+        surfaceFormat.format,
         vk::ComponentMapping(),
         vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 

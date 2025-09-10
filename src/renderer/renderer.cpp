@@ -261,7 +261,7 @@ void Renderer::initGraphics()
 
   vk::VertexInputBindingDescription vertexInputBindingDescription(
       0, sizeof(game.vertices.at(0)), vk::VertexInputRate::eVertex);
-  std::array<vk::VertexInputAttributeDescription, 2> vertexInputAttributes = {{
+  std::array<vk::VertexInputAttributeDescription, 1> vertexInputAttributes = {{
       {0,
        0,
        vk::Format::eR32G32B32A32Sfloat,
@@ -279,14 +279,8 @@ void Renderer::initGraphics()
       static_cast<uint32_t>(vertexInputAttributes.size()),
       vertexInputAttributes.data());
 
-  renderPass = device->createRenderPass();  // TODO should device own this??
-
-  graphics->pipelines["graphics1"] =
-      device->createGraphicsPipeline(vertStage,
-                                     fragStage,
-                                     vertexInputBindingInfo,
-                                     renderPass,
-                                     graphics->pipelineLayout);
+  graphics->pipelines["graphics1"] = device->createGraphicsPipeline(
+      vertStage, fragStage, vertexInputBindingInfo, graphics->pipelineLayout);
 }
 
 void Renderer::update() const
@@ -415,8 +409,6 @@ void Renderer::cleanup()
   for (const auto& descriptorPool : descriptorPools | std::views::values) {
     device->handle.destroyDescriptorPool(descriptorPool);
   }
-
-  device->handle.destroyRenderPass(renderPass);
 
   // device->handle.destroyCommandPool(commandPool);
   for (const auto& imageView : imagesViews) {

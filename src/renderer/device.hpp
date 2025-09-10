@@ -11,6 +11,14 @@ class Compute;
 
 class Device
 {
+private:
+  struct SwapChainSupportDetails
+  {
+    vk::SurfaceCapabilitiesKHR capabilities;
+    std::vector<vk::SurfaceFormatKHR> formats;
+    std::vector<vk::PresentModeKHR> presentModes;
+  };
+
 public:
   explicit Device(vk::Instance& instance);
   Device(vk::Instance& instance, vk::SurfaceKHR* surface);
@@ -32,8 +40,6 @@ public:
     }
   };
 
-  vk::RenderPass createRenderPass() const;
-
   vk::DescriptorPool createDescriptorPool(
       std::vector<vk::DescriptorPoolSize>& poolSizes, uint32_t maxSets);
 
@@ -46,7 +52,6 @@ public:
       vk::PipelineShaderStageCreateInfo& vertexStage,
       vk::PipelineShaderStageCreateInfo& fragmentStage,
       vk::PipelineVertexInputStateCreateInfo vertexInputInfo,
-      vk::RenderPass renderPass,
       vk::PipelineLayout& pipelineLayout,
       vk::PipelineCache pipelineCache = nullptr) const;
 
@@ -63,15 +68,9 @@ public:
   QueueFamilyIndices queueFamilyIndices;
 
 private:
-  struct SwapChainSupportDetails
-  {
-    vk::SurfaceCapabilitiesKHR capabilities;
-    std::vector<vk::SurfaceFormatKHR> formats;
-    std::vector<vk::PresentModeKHR> presentModes;
-  };
-
   vk::Instance& instance;
   vk::SurfaceKHR* surface = nullptr;
+  vk::SurfaceFormatKHR surfaceFormat;
 
   SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice device);
 
