@@ -7,6 +7,8 @@
 #include <vulkan/vulkan_handles.hpp>
 #include <vulkan/vulkan_structs.hpp>
 
+#include "../application/window.hpp"
+
 class Compute;
 
 class Device
@@ -55,7 +57,7 @@ public:
       vk::PipelineLayout& pipelineLayout,
       vk::PipelineCache pipelineCache = nullptr) const;
 
-  std::pair<vk::SwapchainKHR, vk::Extent2D> createSwapchain();
+  std::pair<vk::SwapchainKHR, vk::Extent2D> createSwapchain(const Window& window);
   std::vector<vk::Image> getSwapchainImages(vk::SwapchainKHR swapchain) const;
   std::vector<vk::ImageView> getImageViews(std::vector<vk::Image>& images);
 
@@ -79,7 +81,7 @@ private:
   static vk::PresentModeKHR chooseSwapPresentMode(
       const std::vector<vk::PresentModeKHR>& availablePresentModes);
   static vk::Extent2D chooseSwapExtent(
-      const vk::SurfaceCapabilitiesKHR& capabilities);
+      const vk::SurfaceCapabilitiesKHR& capabilities, const Window& window);
 
   void pickPhysicalDevice(std::vector<const char*>& deviceExtensions,
                           bool graphicsRequired = true);

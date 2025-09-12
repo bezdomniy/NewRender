@@ -245,7 +245,7 @@ vk::Pipeline Device::createGraphicsPipeline(
   return pipeline;
 }
 
-std::pair<vk::SwapchainKHR, vk::Extent2D> Device::createSwapchain()
+std::pair<vk::SwapchainKHR, vk::Extent2D> Device::createSwapchain(const Window& window)
 {
   SwapChainSupportDetails swapChainSupport =
       querySwapChainSupport(physicalDevice);
@@ -253,7 +253,7 @@ std::pair<vk::SwapchainKHR, vk::Extent2D> Device::createSwapchain()
       chooseSwapSurfaceFormat(swapChainSupport.formats);
   vk::PresentModeKHR presentMode =
       chooseSwapPresentMode(swapChainSupport.presentModes);
-  vk::Extent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
+  vk::Extent2D extent = chooseSwapExtent(swapChainSupport.capabilities, window);
 
   uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
   if (swapChainSupport.capabilities.maxImageCount > 0
@@ -375,30 +375,27 @@ vk::PresentModeKHR Device::chooseSwapPresentMode(
 }
 
 vk::Extent2D Device::chooseSwapExtent(
-    const vk::SurfaceCapabilitiesKHR& capabilities)
+    const vk::SurfaceCapabilitiesKHR& capabilities, const Window& window)
 {
-  return capabilities.currentExtent;
+  if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
+  {
+    return capabilities.currentExtent;
+  } else {
+    int width, height;
+    SDL_GetWindowSizeInPixels(window.handle, &width, &height);
 
-  // // TODO: restore this
-  //   if (capabilities.currentExtent.width !=
-  //   std::numeric_limits<uint32_t>::max())
-  //   {
-  //     return capabilities.currentExtent;
-  //   } else {
-  //     auto [width, height] = window->getExtent();
+    VkExtent2D actualExtent = {static_cast<uint32_t>(width),
+                                static_cast<uint32_t>(height)};
 
-  //     VkExtent2D actualExtent = {static_cast<uint32_t>(width),
-  //                                static_cast<uint32_t>(height)};
+    actualExtent.width = std::clamp(actualExtent.width,
+                                    capabilities.minImageExtent.width,
+                                    capabilities.maxImageExtent.width);
+    actualExtent.height = std::clamp(actualExtent.height,
+                                      capabilities.minImageExtent.height,
+                                      capabilities.maxImageExtent.height);
 
-  //     actualExtent.width = std::clamp(actualExtent.width,
-  //                                     capabilities.minImageExtent.width,
-  //                                     capabilities.maxImageExtent.width);
-  //     actualExtent.height = std::clamp(actualExtent.height,
-  //                                      capabilities.minImageExtent.height,
-  //                                      capabilities.maxImageExtent.height);
-
-  //     return actualExtent;
-  //   }
+    return actualExtent;
+  }
 }
 
 bool Device::checkDeviceExtensionSupport(

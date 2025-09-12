@@ -14,6 +14,8 @@ public:
   Window(const std::string& name, uint32_t width, uint32_t height);
   ~Window();
 
+  SDL_Window* handle = nullptr;
+
   struct Extent
   {
     uint32_t width;
@@ -35,5 +37,4 @@ public:
 
 private:
   Properties properties;
-  SDL_Window* handle = nullptr;
 };

@@ -2,6 +2,7 @@ add_library(renderer STATIC)
 
 # Add source files to the 'renderer' library
 target_sources(renderer PRIVATE
+    vmaUsage.cpp
     renderer.cpp
     renderer.hpp
     device.cpp

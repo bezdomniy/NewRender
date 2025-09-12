@@ -3,7 +3,6 @@
 #include "buffers/deviceBuffer.hpp"
 #include "buffers/hostBuffer.hpp"
 #include "graphics.hpp"
-#define VMA_IMPLEMENTATION
 
 #include <cstdint>
 #include <memory>
@@ -43,8 +42,8 @@ Renderer::~Renderer()
   initGraphics();
 
   while (true) {
-    update();
-    // draw();
+    // update();
+    draw();
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
@@ -95,7 +94,7 @@ void Renderer::initVulkan()
 
   vmaCreateAllocator(&allocatorInfo, &allocator);
 
-  std::tie(swapchain, swapchainExtent) = device->createSwapchain();
+  std::tie(swapchain, swapchainExtent) = device->createSwapchain(*window);
   images = device->getSwapchainImages(swapchain);
   imagesViews = device->getImageViews(images);
 }

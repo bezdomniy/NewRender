@@ -6,8 +6,6 @@
 #include <vulkan/vulkan_enums.hpp>
 #include <vulkan/vulkan_structs.hpp>
 
-#include "vk_mem_alloc.h"
-
 DeviceBuffer::DeviceBuffer(vk::Device& device,
                            VmaAllocator& allocator,
                            size_t size,
