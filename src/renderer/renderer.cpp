@@ -1,14 +1,12 @@
-#include <thread>
-
-#include "buffers/deviceBuffer.hpp"
-#include "buffers/hostBuffer.hpp"
-#include "graphics.hpp"
-
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <ranges>
+#include <thread>
 #include <utility>
 #include <vector>
+
+#include "renderer.hpp"
 
 #include <fmt/base.h>
 #include <fmt/ranges.h>
@@ -16,7 +14,9 @@
 #include <vulkan/vulkan_enums.hpp>
 #include <vulkan/vulkan_structs.hpp>
 
-#include "renderer.hpp"
+#include "buffers/deviceBuffer.hpp"
+#include "buffers/hostBuffer.hpp"
+#include "graphics.hpp"
 #include "shader.hpp"
 #include "validation.hpp"
 
@@ -409,6 +409,8 @@ void Renderer::draw()
     throw std::runtime_error("Failed to acquire swap chain image!");
   }
 
+  graphics->commandBuffer.reset();
+
   auto colorAttachmentInfo =
       vk::RenderingAttachmentInfoKHR()
           .setImageView(imagesViews[currentImageIndex])
@@ -471,6 +473,39 @@ void Renderer::draw()
       vk::ImageSubresourceRange {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1});
 
   graphics->commandBuffer.end();
+
+  vk::Semaphore signalSemaphore;
+  if (recycledSemaphores.empty()) {
+    signalSemaphore = device->handle.createSemaphore({});
+  } else {
+    signalSemaphore = recycledSemaphores.back();
+    recycledSemaphores.pop_back();
+  }
+
+  const vk::PipelineStageFlags waitPipelineStage = {
+      vk::PipelineStageFlagBits::eColorAttachmentOutput};
+  vk::SubmitInfo submitInfo(acquireSemaphore,
+                            waitPipelineStage,
+                            graphics->commandBuffer,
+                            signalSemaphore,
+                            nullptr);
+
+  device->graphicsQueue.submit(submitInfo);
+
+  std::vector<vk::Result> results;
+  vk::PresentInfoKHR presentInfo(
+      signalSemaphore, {swapchain}, {currentImageIndex}, results, nullptr);
+
+  if (device->graphicsQueue.presentKHR(presentInfo) != vk::Result::eSuccess) {
+    throw std::runtime_error("Failed present.");
+  }
+
+  if (std::any_of(results.begin(),
+                  results.end(),
+                  [](const auto& x) { return x != vk::Result::eSuccess; }))
+  {
+    throw std::runtime_error("Failed present.");
+  }
 }
 
 void Renderer::cleanup()
