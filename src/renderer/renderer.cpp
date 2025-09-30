@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <ranges>
@@ -177,7 +178,8 @@ void Renderer::initCompute()
   // No barrier because using the same queue for now
   compute->commandBuffer.end();
 
-  const vk::SubmitInfo submitInfo({}, {}, compute->commandBuffer);
+  const vk::SubmitInfo submitInfo {.pCommandBuffers = &compute->commandBuffer,
+                                   .commandBufferCount = 1};
   compute->queue.submit(submitInfo);
   compute->queue.waitIdle();
 
@@ -188,19 +190,17 @@ void Renderer::initCompute()
   vk::DescriptorBufferInfo resultDescriptor(
       deviceResultBuffer.handle, 0, VK_WHOLE_SIZE);
 
-  std::vector<vk::WriteDescriptorSet> writeDescriptorSets = {
-      {{compute->descriptorSet,
-        0,
-        {},
-        vk::DescriptorType::eStorageBuffer,
-        {},
-        buffer0Descriptor},
-       {compute->descriptorSet,
-        1,
-        {},
-        vk::DescriptorType::eStorageBuffer,
-        {},
-        resultDescriptor}}};
+  std::array<vk::WriteDescriptorSet, 2> writeDescriptorSets = {
+      {{.dstSet = compute->descriptorSet,
+        .dstBinding = 0,
+        .descriptorCount = 1,
+        .descriptorType = vk::DescriptorType::eStorageBuffer,
+        .pBufferInfo = &buffer0Descriptor},
+       {.dstSet = compute->descriptorSet,
+        .dstBinding = 1,
+        .descriptorCount = 1,
+        .descriptorType = vk::DescriptorType::eStorageBuffer,
+        .pBufferInfo = &resultDescriptor}}};
 
   device->handle.updateDescriptorSets(writeDescriptorSets, nullptr);
 
@@ -271,12 +271,12 @@ void Renderer::initGraphics()
       //   offsetof(Particle, vel)}
   }};  // Location 1 : Velocity
 
-  vk::PipelineVertexInputStateCreateInfo vertexInputBindingInfo(
-      vk::PipelineVertexInputStateCreateFlags(),
-      1,
-      &vertexInputBindingDescription,
-      static_cast<uint32_t>(vertexInputAttributes.size()),
-      vertexInputAttributes.data());
+  vk::PipelineVertexInputStateCreateInfo vertexInputBindingInfo {
+      .vertexBindingDescriptionCount = 1,
+      .pVertexBindingDescriptions = &vertexInputBindingDescription,
+      .vertexAttributeDescriptionCount =
+          static_cast<uint32_t>(vertexInputAttributes.size()),
+      .pVertexAttributeDescriptions = vertexInputAttributes.data()};
 
   graphics->pipelines["graphics1"] = device->createGraphicsPipeline(
       vertStage, fragStage, vertexInputBindingInfo, graphics->pipelineLayout);
@@ -364,7 +364,8 @@ void Renderer::update() const
   const auto fence = device->handle.createFence({});
   device->handle.resetFences(fence);
 
-  const vk::SubmitInfo submitInfo({}, {}, compute->commandBuffer);
+  const vk::SubmitInfo submitInfo {.pCommandBuffers = &compute->commandBuffer,
+                                   .commandBufferCount = 1};
   compute->queue.submit(submitInfo, fence);
 
   if (device->handle.waitForFences(fence, vk::True, UINT64_MAX)
@@ -484,17 +485,25 @@ void Renderer::draw()
 
   const vk::PipelineStageFlags waitPipelineStage = {
       vk::PipelineStageFlagBits::eColorAttachmentOutput};
-  vk::SubmitInfo submitInfo(acquireSemaphore,
-                            waitPipelineStage,
-                            graphics->commandBuffer,
-                            signalSemaphore,
-                            nullptr);
+
+  vk::SubmitInfo submitInfo {
+      .pWaitSemaphores = &acquireSemaphore,
+      .waitSemaphoreCount = 1,
+      .pWaitDstStageMask = &waitPipelineStage,
+      .pCommandBuffers = &graphics->commandBuffer,
+      .pSignalSemaphores = &signalSemaphore,
+      .signalSemaphoreCount = 1,
+  };
 
   device->graphicsQueue.submit(submitInfo);
 
   std::vector<vk::Result> results;
-  vk::PresentInfoKHR presentInfo(
-      signalSemaphore, {swapchain}, {currentImageIndex}, results, nullptr);
+  vk::PresentInfoKHR presentInfo {.pWaitSemaphores = &signalSemaphore,
+                                  .pSwapchains = &swapchain,
+                                  .swapchainCount = 1,
+                                  .pImageIndices = &currentImageIndex,
+                                  .waitSemaphoreCount = 1,
+                                  .pResults = results.data()};
 
   if (device->graphicsQueue.presentKHR(presentInfo) != vk::Result::eSuccess) {
     throw std::runtime_error("Failed present.");
@@ -561,11 +570,12 @@ void Renderer::createInstance()
     enabledLayers.push_back("VK_LAYER_KHRONOS_validation");
 #endif
 
-    const vk::ApplicationInfo applicationInfo(appName.c_str(),
-                                              VK_MAKE_VERSION(0, 0, 1),
-                                              "NewEngine",
-                                              VK_MAKE_VERSION(0, 0, 1),
-                                              VK_API_VERSION_1_3);
+    const vk::ApplicationInfo applicationInfo {
+        .pApplicationName = appName.c_str(),
+        .applicationVersion = VK_MAKE_VERSION(0, 0, 1),
+        "NewEngine",
+        .engineVersion = VK_MAKE_VERSION(0, 0, 1),
+        .apiVersion = VK_API_VERSION_1_3};
 
 #ifdef __APPLE__
     auto flags = vk::InstanceCreateFlags {
@@ -584,13 +594,14 @@ void Renderer::createInstance()
     VULKAN_HPP_DEFAULT_DISPATCHER.init(dl);
 #endif
 
-    vk::InstanceCreateInfo instanceCreateInfo(
-        flags,
-        &applicationInfo,
-        static_cast<uint32_t>(enabledLayers.size()),
-        enabledLayers.data(),
-        static_cast<uint32_t>(enabledExtensions.size()),
-        enabledExtensions.data());
+    vk::InstanceCreateInfo instanceCreateInfo {
+        .flags = flags,
+        .pApplicationInfo = &applicationInfo,
+        .enabledLayerCount = static_cast<uint32_t>(enabledLayers.size()),
+        .ppEnabledLayerNames = enabledLayers.data(),
+        .enabledExtensionCount =
+            static_cast<uint32_t>(enabledExtensions.size()),
+        .ppEnabledExtensionNames = enabledExtensions.data()};
 
     instance = vk::createInstance(instanceCreateInfo);
 

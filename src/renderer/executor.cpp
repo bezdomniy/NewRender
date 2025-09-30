@@ -24,7 +24,11 @@ Executor::Executor(
 vk::DescriptorSetLayout Executor::createDescriptorSetLayout(
     std::vector<vk::DescriptorSetLayoutBinding>& bindings) const
 {
-  return device.createDescriptorSetLayout({{}, bindings, {}});
+  vk::DescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo {
+      .bindingCount = static_cast<uint32_t>(bindings.size()),
+      .pBindings = bindings.data()};
+
+  return device.createDescriptorSetLayout(descriptorSetLayoutCreateInfo);
 }
 
 vk::DescriptorSet Executor::allocateDescriptorSet(
@@ -35,8 +39,8 @@ vk::DescriptorSet Executor::allocateDescriptorSet(
   vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo(
       descriptorPool, 1, &descriptorSetLayout);
 #else
-  vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo(descriptorPool,
-                                                          descriptorSetLayout);
+  vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo {
+      .descriptorPool = descriptorPool, .pSetLayouts = &descriptorSetLayout};
 #endif
   // TODO: why is this mutliple sets?
   return device.allocateDescriptorSets(descriptorSetAllocateInfo).front();
@@ -45,13 +49,17 @@ vk::DescriptorSet Executor::allocateDescriptorSet(
 vk::CommandPool Executor::createCommandPool(vk::CommandPoolCreateFlags flags,
                                             uint32_t queueIndex) const
 {
-  return device.createCommandPool({flags, queueIndex});
+  vk::CommandPoolCreateInfo commandPoolCreateInfo {
+      .flags = flags, .queueFamilyIndex = queueIndex};
+  return device.createCommandPool(commandPoolCreateInfo);
 }
 
 vk::CommandBuffer Executor::allocateCommandBuffer(
     vk::CommandPool& commandPool, vk::CommandBufferLevel level) const
 {
-  return device.allocateCommandBuffers({commandPool, level, 1}).front();
+  vk::CommandBufferAllocateInfo commandBufferAllocateInfo {
+      .commandPool = commandPool, .level = level, .commandBufferCount = 1};
+  return device.allocateCommandBuffers(commandBufferAllocateInfo).front();
 }
 
 Executor::~Executor()

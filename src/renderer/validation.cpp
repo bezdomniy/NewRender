@@ -70,10 +70,10 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL debugUtilsMessengerCallback(
 vk::DebugUtilsMessengerCreateInfoEXT makeDebugUtilsMessengerCreateInfoEXT()
 {
   return {{},
-          vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
+          .messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
               | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
-          vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
+          .messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
               | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance
               | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation,
-          &debugUtilsMessengerCallback};
+          .pfnUserCallback = &debugUtilsMessengerCallback};
 }
