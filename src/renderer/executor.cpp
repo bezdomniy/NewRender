@@ -11,7 +11,9 @@ Executor::Executor(
 {
   descriptorSetLayout = createDescriptorSetLayout(descriptorSetLayoutBindings);
   descriptorSet = allocateDescriptorSet(descriptorPool, descriptorSetLayout);
-  pipelineLayout = device.createPipelineLayout({{}, descriptorSetLayout});
+  vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo {
+      .setLayoutCount = 1, .pSetLayouts = &descriptorSetLayout};
+  pipelineLayout = device.createPipelineLayout(pipelineLayoutCreateInfo);
 
   device.getQueue(queueFamilyIndex, 0, &queue);
 
@@ -35,13 +37,10 @@ vk::DescriptorSet Executor::allocateDescriptorSet(
     vk::DescriptorPool& descriptorPool,
     vk::DescriptorSetLayout& descriptorSetLayout) const
 {
-#if defined(ANDROID)
-  vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo(
-      descriptorPool, 1, &descriptorSetLayout);
-#else
   vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo {
-      .descriptorPool = descriptorPool, .pSetLayouts = &descriptorSetLayout};
-#endif
+      .descriptorPool = descriptorPool,
+      .descriptorSetCount = 1,
+      .pSetLayouts = &descriptorSetLayout};
   // TODO: why is this mutliple sets?
   return device.allocateDescriptorSets(descriptorSetAllocateInfo).front();
 }

@@ -69,8 +69,7 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL debugUtilsMessengerCallback(
 
 vk::DebugUtilsMessengerCreateInfoEXT makeDebugUtilsMessengerCreateInfoEXT()
 {
-  return {{},
-          .messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
+  return {.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
               | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
           .messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
               | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance

@@ -196,6 +196,8 @@ vk::Pipeline Device::createGraphicsPipeline(
 
   vk::GraphicsPipelineCreateInfo graphics_pipeline_create_info {
       .pStages = pipelineShaderStageCreateInfos.data(),
+      .stageCount =
+          static_cast<uint32_t>(pipelineShaderStageCreateInfos.size()),
       .pVertexInputState = &vertexInputInfo,  // pVertexInputState
       .pInputAssemblyState = &inputAssemblyState,  // pInputAssemblyState
       .pTessellationState = &tessellationState,  // pTessellationState
