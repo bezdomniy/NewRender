@@ -495,10 +495,22 @@ void Renderer::draw()
       .signalSemaphoreCount = 1,
   };
 
-  device->graphicsQueue.submit(submitInfo);
+  const auto fence = device->handle.createFence({});
+  device->handle.resetFences(fence);
+
+  // TODO: make a frame for each frame up front and reuse.
+  device->graphicsQueue.submit(submitInfo, fence);
+
+  if (device->handle.waitForFences(fence, vk::True, UINT64_MAX)
+      != vk::Result::eSuccess)
+  {
+    throw std::runtime_error("Failed to wait for fence.");
+  }
+
+  device->handle.destroyFence(fence);
 
   std::vector<vk::Result> results;
-  vk::PresentInfoKHR presentInfo {.pWaitSemaphores = &signalSemaphore,
+  vk::PresentInfoKHR presentInfo {.signalSemaphore = &signalSemaphore,
                                   .pSwapchains = &swapchain,
                                   .swapchainCount = 1,
                                   .pImageIndices = &currentImageIndex,
@@ -509,9 +521,8 @@ void Renderer::draw()
     throw std::runtime_error("Failed present.");
   }
 
-  if (std::any_of(results.begin(),
-                  results.end(),
-                  [](const auto& x) { return x != vk::Result::eSuccess; }))
+  if (std::ranges::any_of(
+          results, [](const auto& x) { return x != vk::Result::eSuccess; }))
   {
     throw std::runtime_error("Failed present.");
   }

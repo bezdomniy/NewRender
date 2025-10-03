@@ -152,7 +152,7 @@ vk::Pipeline Device::createGraphicsPipeline(
   //  render_pass);
 
   vk::PipelineInputAssemblyStateCreateInfo inputAssemblyState {
-      .topology = vk::PrimitiveTopology::ePointList};
+      .topology = vk::PrimitiveTopology::eTriangleList};
 
   vk::PipelineTessellationStateCreateInfo tessellationState {
       .patchControlPoints = 0};

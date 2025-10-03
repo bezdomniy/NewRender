@@ -11,5 +11,7 @@ target_sources(application PRIVATE
 # Add include directory for the application library
 target_include_directories(application PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Link the 'application' library with its dependencies
-target_link_libraries(application PRIVATE SDL3::SDL3)
+target_link_libraries(application PRIVATE
+    glm::glm
+    SDL3::SDL3
+)
