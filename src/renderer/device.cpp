@@ -151,7 +151,7 @@ vk::Pipeline Device::createGraphicsPipeline(
 
   vk::PipelineInputAssemblyStateCreateInfo inputAssemblyState(
       vk::PipelineInputAssemblyStateCreateFlags(),
-      vk::PrimitiveTopology::ePointList);
+      vk::PrimitiveTopology::eTriangleList);
 
   vk::PipelineTessellationStateCreateInfo tessellationState(
       vk::PipelineTessellationStateCreateFlags(), 0);
@@ -245,7 +245,8 @@ vk::Pipeline Device::createGraphicsPipeline(
   return pipeline;
 }
 
-std::pair<vk::SwapchainKHR, vk::Extent2D> Device::createSwapchain(const Window& window)
+std::pair<vk::SwapchainKHR, vk::Extent2D> Device::createSwapchain(
+    const Window& window)
 {
   SwapChainSupportDetails swapChainSupport =
       querySwapChainSupport(physicalDevice);
@@ -385,14 +386,14 @@ vk::Extent2D Device::chooseSwapExtent(
     SDL_GetWindowSizeInPixels(window.handle, &width, &height);
 
     VkExtent2D actualExtent = {static_cast<uint32_t>(width),
-                                static_cast<uint32_t>(height)};
+                               static_cast<uint32_t>(height)};
 
     actualExtent.width = std::clamp(actualExtent.width,
                                     capabilities.minImageExtent.width,
                                     capabilities.maxImageExtent.width);
     actualExtent.height = std::clamp(actualExtent.height,
-                                      capabilities.minImageExtent.height,
-                                      capabilities.maxImageExtent.height);
+                                     capabilities.minImageExtent.height,
+                                     capabilities.maxImageExtent.height);
 
     return actualExtent;
   }

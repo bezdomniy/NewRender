@@ -7,57 +7,12 @@
     },
     "configurePresets": [
         {
-            "name": "debug",
-            "inherits": [
-                "vcpkg"
-            ],
-            "displayName": "Debug",
-            "description": "Debug build with full symbols",
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/out/build/${presetName}",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "1"
-            }
-        },
-        {
-            "name": "release",
-            "inherits": [
-                "vcpkg"
-            ],
-            "displayName": "Release",
-            "description": "Optimized release build",
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/out/build/${presetName}",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "1"
-            }
-        },
-        {
-            "name": "relwithdebinfo",
-            "inherits": [
-                "vcpkg"
-            ],
-            "displayName": "RelWithDebInfo",
-            "description": "Release build with debug symbols",
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/out/build/${presetName}",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "1"
-            }
-        },
-        {
             "name": "vcpkg",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
             "hidden": true,
             "cacheVariables": {
-                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-                "VCPKG_INSTALLED_DIR": "$env{VCPKG_ROOT}/installed",
-                "VCPKG_FEATURE_FLAGS": "manifests"
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
             }
         }
     ]
