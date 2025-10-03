@@ -27,7 +27,7 @@ HostBuffer::HostBuffer(vk::Device& device,
     };
 
     VmaAllocationCreateInfo allocCreateInfo {
-        .usage = memoryUsage, .flags = flags, .priority = 1.0f};
+        .flags = flags, .usage = memoryUsage, .priority = 1.0f};
 
     auto rawBufferCreateInfo =
         static_cast<VkBufferCreateInfo>(bufferCreateInfo);

@@ -43,7 +43,7 @@ Renderer::~Renderer()
   initGraphics();
 
   while (true) {
-    // update();
+    update();
     draw();
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -178,8 +178,8 @@ void Renderer::initCompute()
   // No barrier because using the same queue for now
   compute->commandBuffer.end();
 
-  const vk::SubmitInfo submitInfo {.pCommandBuffers = &compute->commandBuffer,
-                                   .commandBufferCount = 1};
+  const vk::SubmitInfo submitInfo {.commandBufferCount = 1,
+                                   .pCommandBuffers = &compute->commandBuffer};
   compute->queue.submit(submitInfo);
   compute->queue.waitIdle();
 
@@ -364,8 +364,10 @@ void Renderer::update() const
   const auto fence = device->handle.createFence({});
   device->handle.resetFences(fence);
 
-  const vk::SubmitInfo submitInfo {.pCommandBuffers = &compute->commandBuffer,
-                                   .commandBufferCount = 1};
+  const vk::SubmitInfo submitInfo {
+      .commandBufferCount = 1,
+      .pCommandBuffers = &compute->commandBuffer,
+  };
   compute->queue.submit(submitInfo, fence);
 
   if (device->handle.waitForFences(fence, vk::True, UINT64_MAX)
@@ -487,12 +489,12 @@ void Renderer::draw()
       vk::PipelineStageFlagBits::eColorAttachmentOutput};
 
   vk::SubmitInfo submitInfo {
-      .pWaitSemaphores = &acquireSemaphore,
       .waitSemaphoreCount = 1,
+      .pWaitSemaphores = &acquireSemaphore,
       .pWaitDstStageMask = &waitPipelineStage,
       .pCommandBuffers = &graphics->commandBuffer,
-      .pSignalSemaphores = &signalSemaphore,
       .signalSemaphoreCount = 1,
+      .pSignalSemaphores = &signalSemaphore,
   };
 
   const auto fence = device->handle.createFence({});
@@ -510,11 +512,11 @@ void Renderer::draw()
   device->handle.destroyFence(fence);
 
   std::vector<vk::Result> results;
-  vk::PresentInfoKHR presentInfo {.signalSemaphore = &signalSemaphore,
-                                  .pSwapchains = &swapchain,
+  vk::PresentInfoKHR presentInfo {.waitSemaphoreCount = 1,
+                                  .pWaitSemaphores = &signalSemaphore,
                                   .swapchainCount = 1,
+                                  .pSwapchains = &swapchain,
                                   .pImageIndices = &currentImageIndex,
-                                  .waitSemaphoreCount = 1,
                                   .pResults = results.data()};
 
   if (device->graphicsQueue.presentKHR(presentInfo) != vk::Result::eSuccess) {
@@ -584,7 +586,7 @@ void Renderer::createInstance()
     const vk::ApplicationInfo applicationInfo {
         .pApplicationName = appName.c_str(),
         .applicationVersion = VK_MAKE_VERSION(0, 0, 1),
-        "NewEngine",
+        .pEngineName = "NewEngine",
         .engineVersion = VK_MAKE_VERSION(0, 0, 1),
         .apiVersion = VK_API_VERSION_1_3};
 

@@ -53,12 +53,13 @@ Device::Device(vk::Instance& instance, vk::SurfaceKHR* surface)
       .dynamicRendering = vk::True};
 
   vk::DeviceCreateInfo deviceCreateInfo {
-      .pQueueCreateInfos = &deviceQueueCreateInfo,
+      .pNext = &dynamicRenderingFeature,
       .queueCreateInfoCount = 1,
-      .ppEnabledExtensionNames = enabledDeviceExtensions.data(),
+      .pQueueCreateInfos = &deviceQueueCreateInfo,
       .enabledExtensionCount =
           static_cast<uint32_t>(enabledDeviceExtensions.size()),
-      .pNext = &dynamicRenderingFeature};
+      .ppEnabledExtensionNames = enabledDeviceExtensions.data(),
+  };
 
   handle = physicalDevice.createDevice(deviceCreateInfo);
 
@@ -129,8 +130,8 @@ vk::Pipeline Device::createGraphicsPipeline(
 
   vk::PipelineColorBlendStateCreateInfo colorBlendState {
       .logicOp = vk::LogicOp::eCopy,
-      .pAttachments = &blendAttachmentState,
-      .attachmentCount = 1};
+      .attachmentCount = 1,
+      .pAttachments = &blendAttachmentState};
 
   vk::PipelineDepthStencilStateCreateInfo depthStencilState;
   depthStencilState.depthTestEnable = false;
@@ -195,9 +196,10 @@ vk::Pipeline Device::createGraphicsPipeline(
   pipelineRenderingCreateInfo.setColorAttachmentFormats(surfaceFormat.format);
 
   vk::GraphicsPipelineCreateInfo graphics_pipeline_create_info {
-      .pStages = pipelineShaderStageCreateInfos.data(),
+      .pNext = &pipelineRenderingCreateInfo,
       .stageCount =
           static_cast<uint32_t>(pipelineShaderStageCreateInfos.size()),
+      .pStages = pipelineShaderStageCreateInfos.data(),
       .pVertexInputState = &vertexInputInfo,  // pVertexInputState
       .pInputAssemblyState = &inputAssemblyState,  // pInputAssemblyState
       .pTessellationState = &tessellationState,  // pTessellationState
@@ -209,7 +211,7 @@ vk::Pipeline Device::createGraphicsPipeline(
       .pDynamicState = &dynamicState,  // pDynamicState,
       .layout = pipelineLayout,
       .renderPass = nullptr,  // renderPass
-      .pNext = &pipelineRenderingCreateInfo};
+  };
 
   vk::Result result;
   vk::Pipeline pipeline;
@@ -368,8 +370,10 @@ vk::Extent2D Device::chooseSwapExtent(
                                      capabilities.minImageExtent.height,
                                      capabilities.maxImageExtent.height);
 
-    return vk::Extent2D {.height = actualExtent.height,
-                         .width = actualExtent.width};
+    return vk::Extent2D {
+        .width = actualExtent.width,
+        .height = actualExtent.height,
+    };
   }
 }
 
