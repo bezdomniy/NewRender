@@ -147,8 +147,7 @@ void Renderer::initCompute()
   createHostBuffer("result",
                    game.vertices.size() * sizeof(glm::vec2),
                    game.vertices.data(),
-                   vk::BufferUsageFlagBits::eTransferDst
-                       | vk::BufferUsageFlagBits::eVertexBuffer);
+                   vk::BufferUsageFlagBits::eTransferDst);
 
   const DeviceBuffer& deviceBuffer0 =
       createDeviceBuffer("buffer0",
@@ -161,7 +160,8 @@ void Renderer::initCompute()
                          resultSize * sizeof(glm::vec2),
                          vk::BufferUsageFlagBits::eStorageBuffer
                              | vk::BufferUsageFlagBits::eTransferSrc
-                             | vk::BufferUsageFlagBits::eTransferDst);
+                             | vk::BufferUsageFlagBits::eTransferDst
+                             | vk::BufferUsageFlagBits::eVertexBuffer);
 
   compute->commandBuffer.begin(vk::CommandBufferBeginInfo {});
 
