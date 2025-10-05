@@ -7,5 +7,5 @@ RWStructuredBuffer<float2> result;
 void main(uint3 threadId : SV_DispatchThreadID)
 {
     uint index = threadId.x;
-    result[index] = buffer0[index] + result[index];
+    result[index] = buffer0[index] + result[index]/2;
 }

@@ -147,7 +147,8 @@ void Renderer::initCompute()
   createHostBuffer("result",
                    game.vertices.size() * sizeof(glm::vec2),
                    game.vertices.data(),
-                   vk::BufferUsageFlagBits::eTransferDst);
+                   vk::BufferUsageFlagBits::eTransferDst
+                       | vk::BufferUsageFlagBits::eVertexBuffer);
 
   const DeviceBuffer& deviceBuffer0 =
       createDeviceBuffer("buffer0",
@@ -486,7 +487,7 @@ void Renderer::draw()
                                        graphics->pipelines.at("graphics1"));
 
   graphics->commandBuffer.bindVertexBuffers(
-      0, deviceBuffers.at("buffer0").getHandle(), {0});
+      0, deviceBuffers.at("result").getHandle(), {0});
 
   graphics->commandBuffer.draw(3, 1, 0, 0);
 
