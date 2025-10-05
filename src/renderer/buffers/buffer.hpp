@@ -19,6 +19,8 @@ public:
   VmaAllocation allocation = VK_NULL_HANDLE;
   VmaAllocationInfo allocInfo = {};
 
+  auto getHandle() -> vk::Buffer;
+
 protected:
   vk::Device& device;
   VmaAllocator& allocator;

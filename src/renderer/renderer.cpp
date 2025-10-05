@@ -50,12 +50,12 @@ Renderer::~Renderer()
   }
 }
 
-HostBuffer& Renderer::createHostBuffer(const std::string& name,
-                                       size_t size,
-                                       void* data,
-                                       vk::BufferUsageFlags usageFlags,
-                                       VmaMemoryUsage memoryUsage,
-                                       VmaAllocationCreateFlags flags)
+auto Renderer::createHostBuffer(const std::string& name,
+                                size_t size,
+                                void* data,
+                                vk::BufferUsageFlags usageFlags,
+                                VmaMemoryUsage memoryUsage,
+                                VmaAllocationCreateFlags flags) -> HostBuffer&
 {
   auto [fst, snd] = hostBuffers.try_emplace(name,
                                             device->handle,
@@ -68,11 +68,12 @@ HostBuffer& Renderer::createHostBuffer(const std::string& name,
   return fst->second;
 };
 
-DeviceBuffer& Renderer::createDeviceBuffer(const std::string& name,
-                                           size_t size,
-                                           vk::BufferUsageFlags usageFlags,
-                                           VmaMemoryUsage memoryUsage,
-                                           VmaAllocationCreateFlags flags)
+auto Renderer::createDeviceBuffer(const std::string& name,
+                                  size_t size,
+                                  vk::BufferUsageFlags usageFlags,
+                                  VmaMemoryUsage memoryUsage,
+                                  VmaAllocationCreateFlags flags)
+    -> DeviceBuffer&
 {
   auto [fst, snd] = deviceBuffers.try_emplace(
       name, device->handle, allocator, size, usageFlags, memoryUsage, flags);
@@ -103,9 +104,13 @@ void Renderer::initVulkan()
 void Renderer::initCompute()
 {
   std::vector<vk::DescriptorPoolSize> computeDescriptorPoolSizes = {
-      {vk::DescriptorPoolSize {vk::DescriptorType::eUniformBuffer, 1},
-       vk::DescriptorPoolSize {vk::DescriptorType::eStorageBuffer, 2},
-       vk::DescriptorPoolSize {vk::DescriptorType::eCombinedImageSampler, 1}}};
+      {vk::DescriptorPoolSize {.type = vk::DescriptorType::eUniformBuffer,
+                               .descriptorCount = 1},
+       vk::DescriptorPoolSize {.type = vk::DescriptorType::eStorageBuffer,
+                               .descriptorCount = 2},
+       vk::DescriptorPoolSize {
+           .type = vk::DescriptorType::eCombinedImageSampler,
+           .descriptorCount = 1}}};
 
   const auto computeDescriptorPool =
       device->createDescriptorPool(computeDescriptorPoolSizes, 1);
@@ -113,14 +118,16 @@ void Renderer::initCompute()
 
   // Create compute executor
   std::vector<vk::DescriptorSetLayoutBinding> descriptorSetLayoutBindings = {
-      vk::DescriptorSetLayoutBinding {0,
-                                      vk::DescriptorType::eStorageBuffer,
-                                      1,
-                                      vk::ShaderStageFlagBits::eCompute},
-      vk::DescriptorSetLayoutBinding {1,
-                                      vk::DescriptorType::eStorageBuffer,
-                                      1,
-                                      vk::ShaderStageFlagBits::eCompute}};
+      vk::DescriptorSetLayoutBinding {
+          .binding = 0,
+          .descriptorType = vk::DescriptorType::eStorageBuffer,
+          .descriptorCount = 1,
+          .stageFlags = vk::ShaderStageFlagBits::eCompute},
+      vk::DescriptorSetLayoutBinding {
+          .binding = 1,
+          .descriptorType = vk::DescriptorType::eStorageBuffer,
+          .descriptorCount = 1,
+          .stageFlags = vk::ShaderStageFlagBits::eCompute}};
 
   compute = std::make_unique<Compute>(
       device->handle,
@@ -217,9 +224,13 @@ void Renderer::initCompute()
 void Renderer::initGraphics()
 {
   std::vector<vk::DescriptorPoolSize> graphicsDescriptorPoolSizes = {
-      {vk::DescriptorPoolSize {vk::DescriptorType::eUniformBuffer, 2},
-       vk::DescriptorPoolSize {vk::DescriptorType::eStorageBuffer, 3},
-       vk::DescriptorPoolSize {vk::DescriptorType::eCombinedImageSampler, 2}}};
+      {vk::DescriptorPoolSize {.type = vk::DescriptorType::eUniformBuffer,
+                               .descriptorCount = 2},
+       vk::DescriptorPoolSize {.type = vk::DescriptorType::eStorageBuffer,
+                               .descriptorCount = 3},
+       vk::DescriptorPoolSize {
+           .type = vk::DescriptorType::eCombinedImageSampler,
+           .descriptorCount = 2}}};
 
   auto graphicsDescriptorPool =
       device->createDescriptorPool(graphicsDescriptorPoolSizes, 1);
@@ -227,18 +238,21 @@ void Renderer::initGraphics()
 
   // Create graphics executor
   std::vector<vk::DescriptorSetLayoutBinding> descriptorSetLayoutBindings = {
-      vk::DescriptorSetLayoutBinding {0,
-                                      vk::DescriptorType::eCombinedImageSampler,
-                                      1,
-                                      vk::ShaderStageFlagBits::eFragment},
-      vk::DescriptorSetLayoutBinding {1,
-                                      vk::DescriptorType::eCombinedImageSampler,
-                                      1,
-                                      vk::ShaderStageFlagBits::eFragment},
-      vk::DescriptorSetLayoutBinding {2,
-                                      vk::DescriptorType::eUniformBuffer,
-                                      1,
-                                      vk::ShaderStageFlagBits::eVertex}};
+      vk::DescriptorSetLayoutBinding {
+          .binding = 0,
+          .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+          .descriptorCount = 1,
+          .stageFlags = vk::ShaderStageFlagBits::eFragment},
+      vk::DescriptorSetLayoutBinding {
+          .binding = 1,
+          .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+          .descriptorCount = 1,
+          .stageFlags = vk::ShaderStageFlagBits::eFragment},
+      vk::DescriptorSetLayoutBinding {
+          .binding = 2,
+          .descriptorType = vk::DescriptorType::eUniformBuffer,
+          .descriptorCount = 1,
+          .stageFlags = vk::ShaderStageFlagBits::eVertex}};
 
   graphics = std::make_unique<Graphics>(
       device->handle,
@@ -258,17 +272,20 @@ void Renderer::initGraphics()
   auto fragStage =
       fragShader->getShaderStageCreateInfo(vk::ShaderStageFlagBits::eFragment);
 
-  vk::VertexInputBindingDescription vertexInputBindingDescription(
-      0, sizeof(game.vertices.at(0)), vk::VertexInputRate::eVertex);
+  vk::VertexInputBindingDescription vertexInputBindingDescription {
+      .binding = 0,
+      .stride = sizeof(game.vertices.at(0)),
+      .inputRate = vk::VertexInputRate::eVertex};
+
   std::array<vk::VertexInputAttributeDescription, 1> vertexInputAttributes = {{
-      {0,
-       0,
-       vk::Format::eR32G32Sfloat,
-       offsetof(typeof(game.vertices.at(0)), pos)},  // Location 0 : Position
-      //  {1,
-      //   0,
-      //   vk::Format::eR32G32B32A32Sfloat,
-      //   offsetof(Particle, vel)}
+      {.location = 0,
+       .binding = 0,
+       .format = vk::Format::eR32G32Sfloat,
+       .offset = 0},  // Location 0 : Position
+      //  {.location = 1,
+      //   .binding = 0,
+      //   .format = vk::Format::eR32G32B32A32Sfloat,
+      //   .offset = offsetof(Particle, vel)}
   }};  // Location 1 : Velocity
 
   vk::PipelineVertexInputStateCreateInfo vertexInputBindingInfo {
@@ -467,6 +484,11 @@ void Renderer::draw()
 
   graphics->commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
                                        graphics->pipelines.at("graphics1"));
+
+  graphics->commandBuffer.bindVertexBuffers(
+      0, deviceBuffers.at("buffer0").getHandle(), {0});
+
+  graphics->commandBuffer.draw(3, 1, 0, 0);
 
   graphics->commandBuffer.endRenderingKHR();
 

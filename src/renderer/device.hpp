@@ -27,7 +27,7 @@ private:
     std::optional<uint32_t> presentFamily;
     std::optional<uint32_t> computeFamily;
 
-    [[nodiscard]] bool isComplete() const
+    [[nodiscard]] auto isComplete() const -> bool
     {
       return graphicsFamily.has_value() && presentFamily.has_value()
           && computeFamily.has_value();
@@ -40,26 +40,29 @@ public:
   ~Device();
   void destroy() const;
 
-  Compute createCompute();
+  auto createCompute() -> Compute;
 
-  vk::DescriptorPool createDescriptorPool(
-      std::vector<vk::DescriptorPoolSize>& poolSizes, uint32_t maxSets);
+  auto createDescriptorPool(std::vector<vk::DescriptorPoolSize>& poolSizes,
+                            uint32_t maxSets) -> vk::DescriptorPool;
 
-  vk::Pipeline createComputePipeline(
-      vk::PipelineShaderStageCreateInfo& stage,
-      vk::PipelineLayout& pipelineLayout,
-      vk::PipelineCache pipelineCache = nullptr) const;
+  auto createComputePipeline(vk::PipelineShaderStageCreateInfo& stage,
+                             vk::PipelineLayout& pipelineLayout,
+                             vk::PipelineCache pipelineCache = nullptr) const
+      -> vk::Pipeline;
 
-  vk::Pipeline createGraphicsPipeline(
+  auto createGraphicsPipeline(
       vk::PipelineShaderStageCreateInfo& vertexStage,
       vk::PipelineShaderStageCreateInfo& fragmentStage,
       vk::PipelineVertexInputStateCreateInfo vertexInputInfo,
       vk::PipelineLayout& pipelineLayout,
-      vk::PipelineCache pipelineCache = nullptr) const;
+      vk::PipelineCache pipelineCache = nullptr) const -> vk::Pipeline;
 
-  std::pair<vk::SwapchainKHR, vk::Extent2D> createSwapchain(const Window& window);
-  std::vector<vk::Image> getSwapchainImages(vk::SwapchainKHR swapchain) const;
-  std::vector<vk::ImageView> getImageViews(std::vector<vk::Image>& images);
+  auto createSwapchain(const Window& window)
+      -> std::pair<vk::SwapchainKHR, vk::Extent2D>;
+  auto getSwapchainImages(vk::SwapchainKHR swapchain) const
+      -> std::vector<vk::Image>;
+  auto getImageViews(std::vector<vk::Image>& images)
+      -> std::vector<vk::ImageView>;
 
   vk::PhysicalDeviceMemoryProperties memoryProperties;
   vk::PhysicalDevice physicalDevice {VK_NULL_HANDLE};
@@ -74,20 +77,23 @@ private:
   vk::SurfaceKHR* surface = nullptr;
   vk::SurfaceFormatKHR surfaceFormat;
 
-  SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice device);
+  auto querySwapChainSupport(vk::PhysicalDevice device)
+      -> SwapChainSupportDetails;
 
-  static vk::SurfaceFormatKHR chooseSwapSurfaceFormat(
-      const std::vector<vk::SurfaceFormatKHR>& availableFormats);
-  static vk::PresentModeKHR chooseSwapPresentMode(
-      const std::vector<vk::PresentModeKHR>& availablePresentModes);
-  static vk::Extent2D chooseSwapExtent(
-      const vk::SurfaceCapabilitiesKHR& capabilities, const Window& window);
+  static auto chooseSwapSurfaceFormat(
+      const std::vector<vk::SurfaceFormatKHR>& availableFormats)
+      -> vk::SurfaceFormatKHR;
+  static auto chooseSwapPresentMode(
+      const std::vector<vk::PresentModeKHR>& availablePresentModes)
+      -> vk::PresentModeKHR;
+  static auto chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities,
+                               const Window& window) -> vk::Extent2D;
 
   void pickPhysicalDevice(std::vector<const char*>& deviceExtensions,
                           bool graphicsRequired = true);
-  QueueFamilyIndices findQueueFamilies(vk::PhysicalDevice device,
-                                       bool graphicsRequired = true);
-  static bool checkDeviceExtensionSupport(
+  auto findQueueFamilies(vk::PhysicalDevice device,
+                         bool graphicsRequired = true) -> QueueFamilyIndices;
+  static auto checkDeviceExtensionSupport(
       vk::PhysicalDevice device,
-      const std::vector<const char*>& deviceExtensions);
+      const std::vector<const char*>& deviceExtensions) -> bool;
 };

@@ -1,15 +1,17 @@
 #include <string>
+
 #include "window.hpp"
+
 #include "SDL3/SDL_init.h"
 
 Window::Window(const std::string& name, uint32_t width, uint32_t height)
-    : properties({name, true, {width, height}})
+    : properties({.title = name, .resizable = true, .extent = {width, height}})
 {
   // Allow SIGINT to be handled by the application
   SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
 
   // Initialize SDL
-  if (SDL_Init(SDL_INIT_VIDEO) == false) {
+  if (!SDL_Init(SDL_INIT_VIDEO)) {
     SDL_Log("SDL could not initialize! SDL error: %s\n", SDL_GetError());
   } else {
     SDL_WindowFlags window_flags = SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE;
@@ -46,8 +48,9 @@ auto Window::create_surface(const vk::Instance instance) const -> vk::SurfaceKHR
 
   VkSurfaceKHR surface = VK_NULL_HANDLE;
 
-  if (!SDL_Vulkan_CreateSurface(handle, instance, NULL, &surface)) {
-    throw std::runtime_error(std::string("Failed to create window surface. ") + SDL_GetError());
+  if (!SDL_Vulkan_CreateSurface(handle, instance, nullptr, &surface)) {
+    throw std::runtime_error(std::string("Failed to create window surface. ")
+                             + SDL_GetError());
   }
 
   return static_cast<vk::SurfaceKHR>(surface);

@@ -13,3 +13,8 @@ Buffer::~Buffer()
   handle = VK_NULL_HANDLE;
   allocation = VK_NULL_HANDLE;
 };
+
+auto Buffer::getHandle() -> vk::Buffer
+{
+  return {handle};
+};
