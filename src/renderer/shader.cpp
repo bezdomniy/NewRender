@@ -24,7 +24,8 @@ Shader::~Shader()
   }
 }
 
-vk::ShaderModule Shader::createShaderModule(const std::vector<char>& code)
+auto Shader::createShaderModule(const std::vector<char>& code)
+    -> vk::ShaderModule
 {
   vk::ShaderModuleCreateInfo createInfo;
   createInfo.codeSize = code.size();
@@ -47,7 +48,7 @@ vk::PipelineShaderStageCreateInfo Shader::getShaderStageCreateInfo(
   return shaderStage;
 }
 
-std::vector<char> Shader::readFile(const std::string& filePath)
+auto Shader::readFile(const std::string& filePath) -> std::vector<char>
 {
   std::ifstream file(filePath, std::ios::ate | std::ios::binary);
 
@@ -59,7 +60,7 @@ std::vector<char> Shader::readFile(const std::string& filePath)
   std::vector<char> buffer(fileSize);
 
   file.seekg(0);
-  file.read(buffer.data(), (std::streamsize)fileSize);
+  file.read(buffer.data(), static_cast<std::streamsize>(fileSize));
   file.close();
 
   return buffer;

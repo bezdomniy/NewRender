@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <ranges>
@@ -42,19 +43,19 @@ Renderer::~Renderer()
   initGraphics();
 
   while (true) {
-    // update();
+    update();
     draw();
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 }
 
-HostBuffer& Renderer::createHostBuffer(const std::string& name,
-                                       size_t size,
-                                       void* data,
-                                       vk::BufferUsageFlags usageFlags,
-                                       VmaMemoryUsage memoryUsage,
-                                       VmaAllocationCreateFlags flags)
+auto Renderer::createHostBuffer(const std::string& name,
+                                size_t size,
+                                void* data,
+                                vk::BufferUsageFlags usageFlags,
+                                VmaMemoryUsage memoryUsage,
+                                VmaAllocationCreateFlags flags) -> HostBuffer&
 {
   auto [fst, snd] = hostBuffers.try_emplace(name,
                                             device->handle,
@@ -67,11 +68,12 @@ HostBuffer& Renderer::createHostBuffer(const std::string& name,
   return fst->second;
 };
 
-DeviceBuffer& Renderer::createDeviceBuffer(const std::string& name,
-                                           size_t size,
-                                           vk::BufferUsageFlags usageFlags,
-                                           VmaMemoryUsage memoryUsage,
-                                           VmaAllocationCreateFlags flags)
+auto Renderer::createDeviceBuffer(const std::string& name,
+                                  size_t size,
+                                  vk::BufferUsageFlags usageFlags,
+                                  VmaMemoryUsage memoryUsage,
+                                  VmaAllocationCreateFlags flags)
+    -> DeviceBuffer&
 {
   auto [fst, snd] = deviceBuffers.try_emplace(
       name, device->handle, allocator, size, usageFlags, memoryUsage, flags);
@@ -102,9 +104,13 @@ void Renderer::initVulkan()
 void Renderer::initCompute()
 {
   std::vector<vk::DescriptorPoolSize> computeDescriptorPoolSizes = {
-      {vk::DescriptorPoolSize {vk::DescriptorType::eUniformBuffer, 1},
-       vk::DescriptorPoolSize {vk::DescriptorType::eStorageBuffer, 2},
-       vk::DescriptorPoolSize {vk::DescriptorType::eCombinedImageSampler, 1}}};
+      {vk::DescriptorPoolSize {.type = vk::DescriptorType::eUniformBuffer,
+                               .descriptorCount = 1},
+       vk::DescriptorPoolSize {.type = vk::DescriptorType::eStorageBuffer,
+                               .descriptorCount = 2},
+       vk::DescriptorPoolSize {
+           .type = vk::DescriptorType::eCombinedImageSampler,
+           .descriptorCount = 1}}};
 
   const auto computeDescriptorPool =
       device->createDescriptorPool(computeDescriptorPoolSizes, 1);
@@ -112,14 +118,16 @@ void Renderer::initCompute()
 
   // Create compute executor
   std::vector<vk::DescriptorSetLayoutBinding> descriptorSetLayoutBindings = {
-      vk::DescriptorSetLayoutBinding {0,
-                                      vk::DescriptorType::eStorageBuffer,
-                                      1,
-                                      vk::ShaderStageFlagBits::eCompute},
-      vk::DescriptorSetLayoutBinding {1,
-                                      vk::DescriptorType::eStorageBuffer,
-                                      1,
-                                      vk::ShaderStageFlagBits::eCompute}};
+      vk::DescriptorSetLayoutBinding {
+          .binding = 0,
+          .descriptorType = vk::DescriptorType::eStorageBuffer,
+          .descriptorCount = 1,
+          .stageFlags = vk::ShaderStageFlagBits::eCompute},
+      vk::DescriptorSetLayoutBinding {
+          .binding = 1,
+          .descriptorType = vk::DescriptorType::eStorageBuffer,
+          .descriptorCount = 1,
+          .stageFlags = vk::ShaderStageFlagBits::eCompute}};
 
   compute = std::make_unique<Compute>(
       device->handle,
@@ -154,7 +162,7 @@ void Renderer::initCompute()
                              | vk::BufferUsageFlagBits::eTransferSrc
                              | vk::BufferUsageFlagBits::eTransferDst);
 
-  compute->commandBuffer.begin(vk::CommandBufferBeginInfo());
+  compute->commandBuffer.begin(vk::CommandBufferBeginInfo {});
 
   compute->commandBuffer.copyBuffer(
       hostBuffer0.handle,
@@ -177,7 +185,8 @@ void Renderer::initCompute()
   // No barrier because using the same queue for now
   compute->commandBuffer.end();
 
-  const vk::SubmitInfo submitInfo({}, {}, compute->commandBuffer);
+  const vk::SubmitInfo submitInfo {.commandBufferCount = 1,
+                                   .pCommandBuffers = &compute->commandBuffer};
   compute->queue.submit(submitInfo);
   compute->queue.waitIdle();
 
@@ -188,19 +197,17 @@ void Renderer::initCompute()
   vk::DescriptorBufferInfo resultDescriptor(
       deviceResultBuffer.handle, 0, VK_WHOLE_SIZE);
 
-  std::vector<vk::WriteDescriptorSet> writeDescriptorSets = {
-      {{compute->descriptorSet,
-        0,
-        {},
-        vk::DescriptorType::eStorageBuffer,
-        {},
-        buffer0Descriptor},
-       {compute->descriptorSet,
-        1,
-        {},
-        vk::DescriptorType::eStorageBuffer,
-        {},
-        resultDescriptor}}};
+  std::array<vk::WriteDescriptorSet, 2> writeDescriptorSets = {
+      {{.dstSet = compute->descriptorSet,
+        .dstBinding = 0,
+        .descriptorCount = 1,
+        .descriptorType = vk::DescriptorType::eStorageBuffer,
+        .pBufferInfo = &buffer0Descriptor},
+       {.dstSet = compute->descriptorSet,
+        .dstBinding = 1,
+        .descriptorCount = 1,
+        .descriptorType = vk::DescriptorType::eStorageBuffer,
+        .pBufferInfo = &resultDescriptor}}};
 
   device->handle.updateDescriptorSets(writeDescriptorSets, nullptr);
 
@@ -217,9 +224,13 @@ void Renderer::initCompute()
 void Renderer::initGraphics()
 {
   std::vector<vk::DescriptorPoolSize> graphicsDescriptorPoolSizes = {
-      {vk::DescriptorPoolSize {vk::DescriptorType::eUniformBuffer, 2},
-       vk::DescriptorPoolSize {vk::DescriptorType::eStorageBuffer, 3},
-       vk::DescriptorPoolSize {vk::DescriptorType::eCombinedImageSampler, 2}}};
+      {vk::DescriptorPoolSize {.type = vk::DescriptorType::eUniformBuffer,
+                               .descriptorCount = 2},
+       vk::DescriptorPoolSize {.type = vk::DescriptorType::eStorageBuffer,
+                               .descriptorCount = 3},
+       vk::DescriptorPoolSize {
+           .type = vk::DescriptorType::eCombinedImageSampler,
+           .descriptorCount = 2}}};
 
   auto graphicsDescriptorPool =
       device->createDescriptorPool(graphicsDescriptorPoolSizes, 1);
@@ -227,18 +238,21 @@ void Renderer::initGraphics()
 
   // Create graphics executor
   std::vector<vk::DescriptorSetLayoutBinding> descriptorSetLayoutBindings = {
-      vk::DescriptorSetLayoutBinding {0,
-                                      vk::DescriptorType::eCombinedImageSampler,
-                                      1,
-                                      vk::ShaderStageFlagBits::eFragment},
-      vk::DescriptorSetLayoutBinding {1,
-                                      vk::DescriptorType::eCombinedImageSampler,
-                                      1,
-                                      vk::ShaderStageFlagBits::eFragment},
-      vk::DescriptorSetLayoutBinding {2,
-                                      vk::DescriptorType::eUniformBuffer,
-                                      1,
-                                      vk::ShaderStageFlagBits::eVertex}};
+      vk::DescriptorSetLayoutBinding {
+          .binding = 0,
+          .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+          .descriptorCount = 1,
+          .stageFlags = vk::ShaderStageFlagBits::eFragment},
+      vk::DescriptorSetLayoutBinding {
+          .binding = 1,
+          .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+          .descriptorCount = 1,
+          .stageFlags = vk::ShaderStageFlagBits::eFragment},
+      vk::DescriptorSetLayoutBinding {
+          .binding = 2,
+          .descriptorType = vk::DescriptorType::eUniformBuffer,
+          .descriptorCount = 1,
+          .stageFlags = vk::ShaderStageFlagBits::eVertex}};
 
   graphics = std::make_unique<Graphics>(
       device->handle,
@@ -258,25 +272,28 @@ void Renderer::initGraphics()
   auto fragStage =
       fragShader->getShaderStageCreateInfo(vk::ShaderStageFlagBits::eFragment);
 
-  vk::VertexInputBindingDescription vertexInputBindingDescription(
-      0, sizeof(game.vertices.at(0)), vk::VertexInputRate::eVertex);
+  vk::VertexInputBindingDescription vertexInputBindingDescription {
+      .binding = 0,
+      .stride = sizeof(game.vertices.at(0)),
+      .inputRate = vk::VertexInputRate::eVertex};
+
   std::array<vk::VertexInputAttributeDescription, 1> vertexInputAttributes = {{
-      {0,
-       0,
-       vk::Format::eR32G32Sfloat,
-       offsetof(typeof(game.vertices.at(0)), pos)},  // Location 0 : Position
-      //  {1,
-      //   0,
-      //   vk::Format::eR32G32B32A32Sfloat,
-      //   offsetof(Particle, vel)}
+      {.location = 0,
+       .binding = 0,
+       .format = vk::Format::eR32G32Sfloat,
+       .offset = 0},  // Location 0 : Position
+      //  {.location = 1,
+      //   .binding = 0,
+      //   .format = vk::Format::eR32G32B32A32Sfloat,
+      //   .offset = offsetof(Particle, vel)}
   }};  // Location 1 : Velocity
 
-  vk::PipelineVertexInputStateCreateInfo vertexInputBindingInfo(
-      vk::PipelineVertexInputStateCreateFlags(),
-      1,
-      &vertexInputBindingDescription,
-      static_cast<uint32_t>(vertexInputAttributes.size()),
-      vertexInputAttributes.data());
+  vk::PipelineVertexInputStateCreateInfo vertexInputBindingInfo {
+      .vertexBindingDescriptionCount = 1,
+      .pVertexBindingDescriptions = &vertexInputBindingDescription,
+      .vertexAttributeDescriptionCount =
+          static_cast<uint32_t>(vertexInputAttributes.size()),
+      .pVertexAttributeDescriptions = vertexInputAttributes.data()};
 
   graphics->pipelines["graphics1"] = device->createGraphicsPipeline(
       vertStage, fragStage, vertexInputBindingInfo, graphics->pipelineLayout);
@@ -290,7 +307,7 @@ void Renderer::update() const
   const auto& deviceResultBuffer = deviceBuffers.at("result");
 
   // Execute compute pipeline
-  compute->commandBuffer.begin(vk::CommandBufferBeginInfo());
+  compute->commandBuffer.begin(vk::CommandBufferBeginInfo {});
 
   // Barrier to ensure that input buffer transfer is finished before compute
   // shader reads from it
@@ -364,7 +381,10 @@ void Renderer::update() const
   const auto fence = device->handle.createFence({});
   device->handle.resetFences(fence);
 
-  const vk::SubmitInfo submitInfo({}, {}, compute->commandBuffer);
+  const vk::SubmitInfo submitInfo {
+      .commandBufferCount = 1,
+      .pCommandBuffers = &compute->commandBuffer,
+  };
   compute->queue.submit(submitInfo, fence);
 
   if (device->handle.waitForFences(fence, vk::True, UINT64_MAX)
@@ -418,10 +438,11 @@ void Renderer::draw()
           .setLoadOp(vk::AttachmentLoadOp::eClear)
           .setStoreOp(vk::AttachmentStoreOp::eStore)
           .setClearValue(vk::ClearValue(vk::ClearColorValue(
-              std::array<float, 4> {0.0f, 0.0f, 0.0f, 1.0f})));
+              std::array<float, 4> {0.0F, 0.0F, 0.0F, 1.0F})));
 
   auto renderingInfo = vk::RenderingInfoKHR()
-                           .setRenderArea({{0, 0}, swapchainExtent})
+                           .setRenderArea({.offset = {.x = 0, .y = 0},
+                                           .extent = swapchainExtent})
                            .setLayerCount(1)
                            .setColorAttachmentCount(1)
                            .setPColorAttachments(&colorAttachmentInfo);
@@ -434,20 +455,24 @@ void Renderer::draw()
       vk::AccessFlagBits::eColorAttachmentWrite,
       vk::ImageLayout::eUndefined,
       vk::ImageLayout::eColorAttachmentOptimal,
+      vk::PipelineStageFlagBits::eTopOfPipe,
       vk::PipelineStageFlagBits::eColorAttachmentOutput,
-      vk::PipelineStageFlagBits::eColorAttachmentOutput,
-      vk::ImageSubresourceRange {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1});
+      vk::ImageSubresourceRange {.aspectMask = vk::ImageAspectFlagBits::eColor,
+                                 .baseMipLevel = 0,
+                                 .levelCount = 1,
+                                 .baseArrayLayer = 0,
+                                 .layerCount = 1});
 
-  graphics->commandBuffer.beginRendering(renderingInfo);
+  graphics->commandBuffer.beginRenderingKHR(renderingInfo);
 
-  vk::Viewport viewport(0.0f,
-                        0.0f,
+  vk::Viewport viewport(0.0F,
+                        0.0F,
                         static_cast<float>(swapchainExtent.width),
                         static_cast<float>(swapchainExtent.height),
-                        0.0f,
-                        1.0f);
+                        0.0F,
+                        1.0F);
 
-  vk::Rect2D scissor({0, 0}, swapchainExtent);
+  vk::Rect2D scissor({.x = 0, .y = 0}, swapchainExtent);
   graphics->commandBuffer.setViewport(0, viewport);
   graphics->commandBuffer.setScissor(0, scissor);
 
@@ -460,7 +485,12 @@ void Renderer::draw()
   graphics->commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
                                        graphics->pipelines.at("graphics1"));
 
-  graphics->commandBuffer.endRendering();
+  graphics->commandBuffer.bindVertexBuffers(
+      0, deviceBuffers.at("buffer0").getHandle(), {0});
+
+  graphics->commandBuffer.draw(3, 1, 0, 0);
+
+  graphics->commandBuffer.endRenderingKHR();
 
   graphics->insertImageMemoryBarrier(
       images[currentImageIndex],
@@ -470,7 +500,11 @@ void Renderer::draw()
       vk::ImageLayout::ePresentSrcKHR,
       vk::PipelineStageFlagBits::eColorAttachmentOutput,
       vk::PipelineStageFlagBits::eBottomOfPipe,
-      vk::ImageSubresourceRange {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1});
+      vk::ImageSubresourceRange {.aspectMask = vk::ImageAspectFlagBits::eColor,
+                                 .baseMipLevel = 0,
+                                 .levelCount = 1,
+                                 .baseArrayLayer = 0,
+                                 .layerCount = 1});
 
   graphics->commandBuffer.end();
 
@@ -484,12 +518,16 @@ void Renderer::draw()
 
   const vk::PipelineStageFlags waitPipelineStage = {
       vk::PipelineStageFlagBits::eColorAttachmentOutput};
-  vk::SubmitInfo submitInfo(acquireSemaphore,
-                            waitPipelineStage,
-                            graphics->commandBuffer,
-                            signalSemaphore,
-                            nullptr);
 
+  vk::SubmitInfo submitInfo {
+      .waitSemaphoreCount = 1,
+      .pWaitSemaphores = &acquireSemaphore,
+      .pWaitDstStageMask = &waitPipelineStage,
+      .commandBufferCount = 1,
+      .pCommandBuffers = &graphics->commandBuffer,
+      .signalSemaphoreCount = 1,
+      .pSignalSemaphores = &signalSemaphore,
+  };
 
   const auto fence = device->handle.createFence({});
   device->handle.resetFences(fence);
@@ -498,7 +536,7 @@ void Renderer::draw()
   device->graphicsQueue.submit(submitInfo, fence);
 
   if (device->handle.waitForFences(fence, vk::True, UINT64_MAX)
-    != vk::Result::eSuccess)
+      != vk::Result::eSuccess)
   {
     throw std::runtime_error("Failed to wait for fence.");
   }
@@ -506,16 +544,18 @@ void Renderer::draw()
   device->handle.destroyFence(fence);
 
   std::vector<vk::Result> results;
-  const vk::PresentInfoKHR presentInfo(
-      signalSemaphore, {swapchain}, {currentImageIndex}, results, nullptr);
+  vk::PresentInfoKHR presentInfo {.waitSemaphoreCount = 1,
+                                  .pWaitSemaphores = &signalSemaphore,
+                                  .swapchainCount = 1,
+                                  .pSwapchains = &swapchain,
+                                  .pImageIndices = &currentImageIndex};
 
   if (device->graphicsQueue.presentKHR(presentInfo) != vk::Result::eSuccess) {
     throw std::runtime_error("Failed present.");
   }
 
   if (std::ranges::any_of(
-          results,
-                  [](const auto& x) { return x != vk::Result::eSuccess; }))
+          results, [](const auto& x) { return x != vk::Result::eSuccess; }))
   {
     throw std::runtime_error("Failed present.");
   }
@@ -574,11 +614,12 @@ void Renderer::createInstance()
     enabledLayers.push_back("VK_LAYER_KHRONOS_validation");
 #endif
 
-    const vk::ApplicationInfo applicationInfo(appName.c_str(),
-                                              VK_MAKE_VERSION(0, 0, 1),
-                                              "NewEngine",
-                                              VK_MAKE_VERSION(0, 0, 1),
-                                              VK_API_VERSION_1_3);
+    const vk::ApplicationInfo applicationInfo {
+        .pApplicationName = appName.c_str(),
+        .applicationVersion = VK_MAKE_VERSION(0, 0, 1),
+        .pEngineName = "NewEngine",
+        .engineVersion = VK_MAKE_VERSION(0, 0, 1),
+        .apiVersion = VK_API_VERSION_1_3};
 
 #ifdef __APPLE__
     auto flags = vk::InstanceCreateFlags {
@@ -597,13 +638,14 @@ void Renderer::createInstance()
     VULKAN_HPP_DEFAULT_DISPATCHER.init(dl);
 #endif
 
-    vk::InstanceCreateInfo instanceCreateInfo(
-        flags,
-        &applicationInfo,
-        static_cast<uint32_t>(enabledLayers.size()),
-        enabledLayers.data(),
-        static_cast<uint32_t>(enabledExtensions.size()),
-        enabledExtensions.data());
+    vk::InstanceCreateInfo instanceCreateInfo {
+        .flags = flags,
+        .pApplicationInfo = &applicationInfo,
+        .enabledLayerCount = static_cast<uint32_t>(enabledLayers.size()),
+        .ppEnabledLayerNames = enabledLayers.data(),
+        .enabledExtensionCount =
+            static_cast<uint32_t>(enabledExtensions.size()),
+        .ppEnabledExtensionNames = enabledExtensions.data()};
 
     instance = vk::createInstance(instanceCreateInfo);
 

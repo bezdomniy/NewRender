@@ -2,11 +2,11 @@
 
 #include "validation.hpp"
 
-VKAPI_ATTR vk::Bool32 VKAPI_CALL debugUtilsMessengerCallback(
+VKAPI_ATTR auto VKAPI_CALL debugUtilsMessengerCallback(
     vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     vk::DebugUtilsMessageTypeFlagsEXT messageTypes,
     const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
-    void* /*pUserData*/)
+    void* /*pUserData*/) -> vk::Bool32
 {
 #if !defined(NDEBUG)
   switch (static_cast<uint32_t>(pCallbackData->messageIdNumber)) {
@@ -67,13 +67,13 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL debugUtilsMessengerCallback(
   return vk::False;
 }
 
-vk::DebugUtilsMessengerCreateInfoEXT makeDebugUtilsMessengerCreateInfoEXT()
+auto makeDebugUtilsMessengerCreateInfoEXT()
+    -> vk::DebugUtilsMessengerCreateInfoEXT
 {
-  return {{},
-          vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
+  return {.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
               | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
-          vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
+          .messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
               | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance
               | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation,
-          &debugUtilsMessengerCallback};
+          .pfnUserCallback = &debugUtilsMessengerCallback};
 }

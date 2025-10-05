@@ -22,7 +22,7 @@ Device::Device(vk::Instance& instance, vk::SurfaceKHR* surface)
 {
   std::vector<const char*> enabledDeviceExtensions;
 
-  if (surface) {
+  if (surface != nullptr) {
     enabledDeviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
                                VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME};
   }
@@ -34,13 +34,13 @@ Device::Device(vk::Instance& instance, vk::SurfaceKHR* surface)
   memoryProperties = physicalDevice.getMemoryProperties();
 
   // create a Device
-  float queuePriority = 0.0f;
-  vk::DeviceQueueCreateInfo deviceQueueCreateInfo(
-      vk::DeviceQueueCreateFlags(),
-      surface ? queueFamilyIndices.graphicsFamily.value()
-              : queueFamilyIndices.computeFamily.value(),
-      1,
-      &queuePriority);
+  float queuePriority = 0.0F;
+  vk::DeviceQueueCreateInfo deviceQueueCreateInfo {
+      .queueFamilyIndex = (surface != nullptr)
+          ? queueFamilyIndices.graphicsFamily.value()
+          : queueFamilyIndices.computeFamily.value(),
+      .queueCount = 1,
+      .pQueuePriorities = &queuePriority};
 
 #ifdef __APPLE__
 #  ifndef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
@@ -50,21 +50,29 @@ Device::Device(vk::Instance& instance, vk::SurfaceKHR* surface)
   enabledDeviceExtensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
 #endif
 
-  vk::PhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeature(
-      vk::True);
+  vk::PhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeature {
+      .dynamicRendering = vk::True};
 
-  vk::DeviceCreateInfo deviceCreateInfo(vk::DeviceCreateFlags(),
-                                        deviceQueueCreateInfo,
-                                        {},
-                                        enabledDeviceExtensions,
-                                        {},
-                                        &dynamicRenderingFeature);
+  // vk::PhysicalDeviceVulkan11Features features11 {
+  //     .shaderDrawParameters = vk::True,
+  // };
+  // // Chain dynamic rendering after Vulkan 1.1 features
+  // features11.pNext = &dynamicRenderingFeature;
+
+  vk::DeviceCreateInfo deviceCreateInfo {
+      .pNext = &dynamicRenderingFeature,
+      .queueCreateInfoCount = 1,
+      .pQueueCreateInfos = &deviceQueueCreateInfo,
+      .enabledExtensionCount =
+          static_cast<uint32_t>(enabledDeviceExtensions.size()),
+      .ppEnabledExtensionNames = enabledDeviceExtensions.data(),
+  };
 
   handle = physicalDevice.createDevice(deviceCreateInfo);
 
   handle.getQueue(queueFamilyIndices.computeFamily.value(), 0, &computeQueue);
 
-  if (surface) {
+  if (surface != nullptr) {
     handle.getQueue(
         queueFamilyIndices.graphicsFamily.value(), 0, &graphicsQueue);
     handle.getQueue(queueFamilyIndices.presentFamily.value(), 0, &presentQueue);
@@ -78,19 +86,24 @@ void Device::destroy() const
   handle.destroy();
 }
 
-vk::DescriptorPool Device::createDescriptorPool(
+auto Device::createDescriptorPool(
     std::vector<vk::DescriptorPoolSize>& poolSizes, uint32_t maxSets)
+    -> vk::DescriptorPool
 {
-  return handle.createDescriptorPool({{}, maxSets, poolSizes});
+  vk::DescriptorPoolCreateInfo descriptorPoolCreateInfo {
+      .maxSets = maxSets,
+      .poolSizeCount = static_cast<uint32_t>(poolSizes.size()),
+      .pPoolSizes = poolSizes.data()};
+  return handle.createDescriptorPool(descriptorPoolCreateInfo);
 }
 
-vk::Pipeline Device::createComputePipeline(
-    vk::PipelineShaderStageCreateInfo& stage,
-    vk::PipelineLayout& pipelineLayout,
-    vk::PipelineCache pipelineCache) const
+auto Device::createComputePipeline(vk::PipelineShaderStageCreateInfo& stage,
+                                   vk::PipelineLayout& pipelineLayout,
+                                   vk::PipelineCache pipelineCache) const
+    -> vk::Pipeline
 {
-  vk::ComputePipelineCreateInfo compute_pipeline_create_info(
-      {}, stage, pipelineLayout);
+  vk::ComputePipelineCreateInfo compute_pipeline_create_info {
+      .stage = stage, .layout = pipelineLayout};
 
   vk::Result result;
   vk::Pipeline pipeline;
@@ -101,19 +114,19 @@ vk::Pipeline Device::createComputePipeline(
   return pipeline;
 }
 
-vk::Pipeline Device::createGraphicsPipeline(
+auto Device::createGraphicsPipeline(
     vk::PipelineShaderStageCreateInfo& vertexStage,
     vk::PipelineShaderStageCreateInfo& fragmentStage,
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo,
     vk::PipelineLayout& pipelineLayout,
-    vk::PipelineCache pipelineCache) const
+    vk::PipelineCache pipelineCache) const -> vk::Pipeline
 {
   std::array<vk::PipelineShaderStageCreateInfo, 2>
       pipelineShaderStageCreateInfos = {vertexStage, fragmentStage};
 
   // Additive blending
   vk::PipelineColorBlendAttachmentState blendAttachmentState(
-      true,
+      vk::True,
       vk::BlendFactor::eOne,
       vk::BlendFactor::eOne,
       vk::BlendOp::eAdd,
@@ -123,12 +136,10 @@ vk::Pipeline Device::createGraphicsPipeline(
       vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG
           | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA);
 
-  vk::PipelineColorBlendStateCreateInfo colorBlendState(
-      vk::PipelineColorBlendStateCreateFlags(),
-      false,
-      vk::LogicOp::eCopy,
-      blendAttachmentState,
-      {0.0f, 0.0f, 0.0f, 0.0f});
+  vk::PipelineColorBlendStateCreateInfo colorBlendState {
+      .logicOp = vk::LogicOp::eCopy,
+      .attachmentCount = 1,
+      .pAttachments = &blendAttachmentState};
 
   vk::PipelineDepthStencilStateCreateInfo depthStencilState;
   depthStencilState.depthTestEnable = false;
@@ -149,53 +160,29 @@ vk::Pipeline Device::createGraphicsPipeline(
   //  graphics.pipeline_layout,
   //  render_pass);
 
-  vk::PipelineInputAssemblyStateCreateInfo inputAssemblyState(
-      vk::PipelineInputAssemblyStateCreateFlags(),
-      vk::PrimitiveTopology::eTriangleList);
+  vk::PipelineInputAssemblyStateCreateInfo inputAssemblyState {
+      .topology = vk::PrimitiveTopology::eTriangleList};
 
-  vk::PipelineTessellationStateCreateInfo tessellationState(
-      vk::PipelineTessellationStateCreateFlags(), 0);
+  vk::PipelineTessellationStateCreateInfo tessellationState {
+      .patchControlPoints = 0};
 
-  vk::PipelineViewportStateCreateInfo viewportState(
-      vk::PipelineViewportStateCreateFlags(), 1, nullptr, 1, nullptr);
+  vk::PipelineViewportStateCreateInfo viewportState {.viewportCount = 1,
+                                                     .scissorCount = 1};
 
   // vk::PipelineRasterizationStateCreateInfo rasterization_state {
   //     .polygonMode = polygon_mode,
   //     .cullMode = cull_mode,
   //     .frontFace = front_face,
-  //     .lineWidth = 1.0f};
+  //     .lineWidth = 1.0F};
 
-  vk::PipelineRasterizationStateCreateInfo rasterizationState(
-      vk::PipelineRasterizationStateCreateFlags(),
-      false,
-      false,
-      vk::PolygonMode::eFill,
-      vk::CullModeFlagBits::eNone,
-      vk::FrontFace::eCounterClockwise,
-      false,
-      0.0f,
-      0.0f,
-      0.0f,
-      1.0f);
+  vk::PipelineRasterizationStateCreateInfo rasterizationState {
+      .polygonMode = vk::PolygonMode::eFill, .lineWidth = 1.0F};
 
   // vk::PipelineMultisampleStateCreateInfo multisample_state {
   //     .rasterizationSamples = vk::SampleCountFlagBits::e1};
 
-  vk::PipelineMultisampleStateCreateInfo multisampleState(
-      vk::PipelineMultisampleStateCreateFlags(), vk::SampleCountFlagBits::e1);
-
-  // vk::PipelineColorBlendStateCreateInfo color_blend_state {
-  //     .attachmentCount =
-  //     static_cast<uint32_t>(blend_attachment_states.size()), .pAttachments =
-  //     blend_attachment_states.data()};
-
-  vk::PipelineColorBlendStateCreateInfo colorBlendStateCreateInfo(
-      vk::PipelineColorBlendStateCreateFlags(),
-      false,
-      vk::LogicOp::eCopy,
-      1,
-      &blendAttachmentState,
-      {0.0f, 0.0f, 0.0f, 0.0f});
+  vk::PipelineMultisampleStateCreateInfo multisampleState {
+      .rasterizationSamples = vk::SampleCountFlagBits::e1};
 
   // std::array<vk::DynamicState, 2> dynamic_state_enables = {
   //     vk::DynamicState::eViewport, vk::DynamicState::eScissor};
@@ -208,33 +195,36 @@ vk::Pipeline Device::createGraphicsPipeline(
   //     static_cast<uint32_t>(dynamic_state_enables.size()), .pDynamicStates =
   //     dynamic_state_enables.data()};
 
-  vk::PipelineDynamicStateCreateInfo dynamicState(
-      vk::PipelineDynamicStateCreateFlags(),
-      static_cast<uint32_t>(dynamicStateEnables.size()),
-      dynamicStateEnables.data());
+  vk::PipelineDynamicStateCreateInfo dynamicState {
+      .dynamicStateCount = static_cast<uint32_t>(dynamicStateEnables.size()),
+      .pDynamicStates = dynamicStateEnables.data()};
 
   vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo {};
   pipelineRenderingCreateInfo.setColorAttachmentCount(1);
   pipelineRenderingCreateInfo.setColorAttachmentFormats(surfaceFormat.format);
 
-  vk::GraphicsPipelineCreateInfo graphics_pipeline_create_info(
-      vk::PipelineCreateFlags(),
-      pipelineShaderStageCreateInfos,
-      &vertexInputInfo,  // pVertexInputState
-      &inputAssemblyState,  // pInputAssemblyState
-      &tessellationState,  // pTessellationState
-      &viewportState,  // pViewportState
-      &rasterizationState,  // pRasterizationState
-      &multisampleState,  // pMultisampleState
-      &depthStencilState,  // pDepthStencilState
-      &colorBlendState,  // pColorBlendState
-      &dynamicState,  // pDynamicState,
-      pipelineLayout,
-      nullptr,  // renderPass
-      0,  // subpass
-      nullptr,
-      {},
-      &pipelineRenderingCreateInfo);
+  // std::array<vk::Format, 2> formats = {vk::Format::eB8G8R8A8Srgb};
+  // pipelineRenderingCreateInfo
+  //     .setColorAttachmentCount(static_cast<uint32_t>(formats.size()))
+  //     .setPColorAttachmentFormats(formats.data());
+
+  vk::GraphicsPipelineCreateInfo graphics_pipeline_create_info {
+      .pNext = &pipelineRenderingCreateInfo,
+      .stageCount =
+          static_cast<uint32_t>(pipelineShaderStageCreateInfos.size()),
+      .pStages = pipelineShaderStageCreateInfos.data(),
+      .pVertexInputState = &vertexInputInfo,  // pVertexInputState
+      .pInputAssemblyState = &inputAssemblyState,  // pInputAssemblyState
+      .pTessellationState = &tessellationState,  // pTessellationState
+      .pViewportState = &viewportState,  // pViewportState
+      .pRasterizationState = &rasterizationState,  // pRasterizationState
+      .pMultisampleState = &multisampleState,  // pMultisampleState
+      .pDepthStencilState = &depthStencilState,  // pDepthStencilState
+      .pColorBlendState = &colorBlendState,  // pColorBlendState
+      .pDynamicState = &dynamicState,  // pDynamicState,
+      .layout = pipelineLayout,
+      .renderPass = nullptr,  // renderPass
+  };
 
   vk::Result result;
   vk::Pipeline pipeline;
@@ -245,13 +235,12 @@ vk::Pipeline Device::createGraphicsPipeline(
   return pipeline;
 }
 
-std::pair<vk::SwapchainKHR, vk::Extent2D> Device::createSwapchain(
-    const Window& window)
+auto Device::createSwapchain(const Window& window)
+    -> std::pair<vk::SwapchainKHR, vk::Extent2D>
 {
   SwapChainSupportDetails swapChainSupport =
       querySwapChainSupport(physicalDevice);
-  vk::SurfaceFormatKHR surfaceFormat =
-      chooseSwapSurfaceFormat(swapChainSupport.formats);
+  surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
   vk::PresentModeKHR presentMode =
       chooseSwapPresentMode(swapChainSupport.presentModes);
   vk::Extent2D extent = chooseSwapExtent(swapChainSupport.capabilities, window);
@@ -263,22 +252,20 @@ std::pair<vk::SwapchainKHR, vk::Extent2D> Device::createSwapchain(
     imageCount = swapChainSupport.capabilities.maxImageCount;
   }
 
-  vk::SwapchainCreateInfoKHR createInfo(
-      vk::SwapchainCreateFlagsKHR(),
-      *surface,
-      imageCount,
-      surfaceFormat.format,
-      surfaceFormat.colorSpace,
-      extent,
-      1,
-      vk::ImageUsageFlagBits::eColorAttachment,
-      vk::SharingMode::eExclusive,
-      nullptr,
-      swapChainSupport.capabilities.currentTransform,
-      vk::CompositeAlphaFlagBitsKHR::eOpaque,
-      presentMode,
-      VK_TRUE,
-      nullptr);
+  vk::SwapchainCreateInfoKHR createInfo {
+      .surface = *surface,
+      .minImageCount = imageCount,
+      .imageFormat = surfaceFormat.format,
+      .imageColorSpace = surfaceFormat.colorSpace,
+      .imageExtent = extent,
+      .imageArrayLayers = 1,
+      .imageUsage = vk::ImageUsageFlagBits::eColorAttachment,
+      .imageSharingMode = vk::SharingMode::eExclusive,
+      .preTransform = swapChainSupport.capabilities.currentTransform,
+      .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
+      .presentMode = presentMode,
+      .clipped = VK_TRUE,
+      .oldSwapchain = nullptr};
 
   auto indices = findQueueFamilies(physicalDevice);
   if (indices.graphicsFamily != indices.presentFamily) {
@@ -298,37 +285,36 @@ std::vector<vk::Image> Device::getSwapchainImages(
   return handle.getSwapchainImagesKHR(swapchain);
 }
 
-std::vector<vk::ImageView> Device::getImageViews(std::vector<vk::Image>& images)
+auto Device::getImageViews(std::vector<vk::Image>& images)
+    -> std::vector<vk::ImageView>
 {
   SwapChainSupportDetails swapChainSupport =
       querySwapChainSupport(physicalDevice);
-  vk::SurfaceFormatKHR surfaceFormat =
-      chooseSwapSurfaceFormat(swapChainSupport.formats);
 
   std::vector<vk::ImageView> imagesViews;
   imagesViews.resize(images.size());
   for (size_t i = 0; i < images.size(); i++) {
-    vk::ImageViewCreateInfo createInfo(
-        vk::ImageViewCreateFlags(),
-        images[i],
-        vk::ImageViewType::e2D,
-        surfaceFormat.format,
-        vk::ComponentMapping(),
-        vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+    vk::ImageViewCreateInfo createInfo {
+        .image = images[i],
+        .viewType = vk::ImageViewType::e2D,
+        .format = surfaceFormat.format,
+        .components = vk::ComponentMapping(),
+        .subresourceRange = vk::ImageSubresourceRange(
+            vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)};
 
     imagesViews[i] = handle.createImageView(createInfo);
   }
   return imagesViews;
 }
 
-Device::SwapChainSupportDetails Device::querySwapChainSupport(
-    vk::PhysicalDevice device)
+auto Device::querySwapChainSupport(vk::PhysicalDevice device)
+    -> Device::SwapChainSupportDetails
 {
   SwapChainSupportDetails details;
 
   (void)device.getSurfaceCapabilitiesKHR(*surface, &details.capabilities);
 
-  uint32_t formatCount;
+  uint32_t formatCount = 0;
   (void)device.getSurfaceFormatsKHR(*surface, &formatCount, nullptr);
 
   if (formatCount != 0) {
@@ -337,7 +323,7 @@ Device::SwapChainSupportDetails Device::querySwapChainSupport(
         *surface, &formatCount, details.formats.data());
   }
 
-  uint32_t presentModeCount;
+  uint32_t presentModeCount = 0;
   (void)device.getSurfacePresentModesKHR(*surface, &presentModeCount, nullptr);
 
   if (presentModeCount != 0) {
@@ -349,8 +335,9 @@ Device::SwapChainSupportDetails Device::querySwapChainSupport(
   return details;
 }
 
-vk::SurfaceFormatKHR Device::chooseSwapSurfaceFormat(
+auto Device::chooseSwapSurfaceFormat(
     const std::vector<vk::SurfaceFormatKHR>& availableFormats)
+    -> vk::SurfaceFormatKHR
 {
   for (const auto& availableFormat : availableFormats) {
     if (availableFormat.format == vk::Format::eB8G8R8A8Srgb
@@ -363,8 +350,9 @@ vk::SurfaceFormatKHR Device::chooseSwapSurfaceFormat(
   return availableFormats[0];
 }
 
-vk::PresentModeKHR Device::chooseSwapPresentMode(
+auto Device::chooseSwapPresentMode(
     const std::vector<vk::PresentModeKHR>& availablePresentModes)
+    -> vk::PresentModeKHR
 {
   for (const auto& availablePresentMode : availablePresentModes) {
     if (availablePresentMode == vk::PresentModeKHR::eMailbox) {
@@ -375,32 +363,36 @@ vk::PresentModeKHR Device::chooseSwapPresentMode(
   return vk::PresentModeKHR::eFifo;
 }
 
-vk::Extent2D Device::chooseSwapExtent(
-    const vk::SurfaceCapabilitiesKHR& capabilities, const Window& window)
+auto Device::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities,
+                              const Window& window) -> vk::Extent2D
 {
   if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
   {
     return capabilities.currentExtent;
-  } else {
-    int width, height;
-    SDL_GetWindowSizeInPixels(window.handle, &width, &height);
-
-    VkExtent2D actualExtent = {static_cast<uint32_t>(width),
-                               static_cast<uint32_t>(height)};
-
-    actualExtent.width = std::clamp(actualExtent.width,
-                                    capabilities.minImageExtent.width,
-                                    capabilities.maxImageExtent.width);
-    actualExtent.height = std::clamp(actualExtent.height,
-                                     capabilities.minImageExtent.height,
-                                     capabilities.maxImageExtent.height);
-
-    return actualExtent;
   }
+  int width = 0;
+  int height = 0;
+  SDL_GetWindowSizeInPixels(window.handle, &width, &height);
+
+  VkExtent2D actualExtent = {static_cast<uint32_t>(width),
+                             static_cast<uint32_t>(height)};
+
+  actualExtent.width = std::clamp(actualExtent.width,
+                                  capabilities.minImageExtent.width,
+                                  capabilities.maxImageExtent.width);
+  actualExtent.height = std::clamp(actualExtent.height,
+                                   capabilities.minImageExtent.height,
+                                   capabilities.maxImageExtent.height);
+
+  return vk::Extent2D {
+      .width = actualExtent.width,
+      .height = actualExtent.height,
+  };
 }
 
-bool Device::checkDeviceExtensionSupport(
+auto Device::checkDeviceExtensionSupport(
     vk::PhysicalDevice device, const std::vector<const char*>& deviceExtensions)
+    -> bool
 {
   uint32_t extensionCount;
   (void)device.enumerateDeviceExtensionProperties(
@@ -420,8 +412,8 @@ bool Device::checkDeviceExtensionSupport(
   return requiredExtensions.empty();
 }
 
-Device::QueueFamilyIndices Device::findQueueFamilies(vk::PhysicalDevice device,
-                                                     bool graphicsRequired)
+auto Device::findQueueFamilies(vk::PhysicalDevice device, bool graphicsRequired)
+    -> Device::QueueFamilyIndices
 {
   QueueFamilyIndices indices;
 
@@ -442,14 +434,14 @@ Device::QueueFamilyIndices Device::findQueueFamilies(vk::PhysicalDevice device,
         indices.graphicsFamily = i;
       }
 
-      VkBool32 presentSupport = false;
+      VkBool32 presentSupport = vk::False;
       auto result = device.getSurfaceSupportKHR(i, *surface, &presentSupport);
 
       if (result != vk::Result::eSuccess) {
         throw std::runtime_error("Failed to create window surface.");
       }
 
-      if (presentSupport) {
+      if (presentSupport == vk::True) {
         indices.presentFamily = i;
       }
     }

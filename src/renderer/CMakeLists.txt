@@ -27,7 +27,7 @@ target_sources(renderer PRIVATE
 
 # Add include directory for the renderer library
 target_include_directories(renderer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_definitions(renderer PUBLIC VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1)
+target_compile_definitions(renderer PUBLIC VULKAN_HPP_NO_STRUCT_CONSTRUCTORS VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1)
 
 # Link the 'renderer' library with its dependencies
 target_link_libraries(renderer PRIVATE

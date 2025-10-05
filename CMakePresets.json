@@ -14,7 +14,9 @@
             "cacheVariables": {
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
                 "VCPKG_INSTALLED_DIR": "$env{VCPKG_ROOT}/installed",
-                "VCPKG_FEATURE_FLAGS": "manifests"
+                "VCPKG_FEATURE_FLAGS": "manifests",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "1"
             }
         }
     ]

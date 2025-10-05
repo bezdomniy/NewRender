@@ -11,7 +11,9 @@ Executor::Executor(
 {
   descriptorSetLayout = createDescriptorSetLayout(descriptorSetLayoutBindings);
   descriptorSet = allocateDescriptorSet(descriptorPool, descriptorSetLayout);
-  pipelineLayout = device.createPipelineLayout({{}, descriptorSetLayout});
+  vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo {
+      .setLayoutCount = 1, .pSetLayouts = &descriptorSetLayout};
+  pipelineLayout = device.createPipelineLayout(pipelineLayoutCreateInfo);
 
   device.getQueue(queueFamilyIndex, 0, &queue);
 
@@ -24,20 +26,21 @@ Executor::Executor(
 vk::DescriptorSetLayout Executor::createDescriptorSetLayout(
     std::vector<vk::DescriptorSetLayoutBinding>& bindings) const
 {
-  return device.createDescriptorSetLayout({{}, bindings, {}});
+  vk::DescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo {
+      .bindingCount = static_cast<uint32_t>(bindings.size()),
+      .pBindings = bindings.data()};
+
+  return device.createDescriptorSetLayout(descriptorSetLayoutCreateInfo);
 }
 
 vk::DescriptorSet Executor::allocateDescriptorSet(
     vk::DescriptorPool& descriptorPool,
     vk::DescriptorSetLayout& descriptorSetLayout) const
 {
-#if defined(ANDROID)
-  vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo(
-      descriptorPool, 1, &descriptorSetLayout);
-#else
-  vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo(descriptorPool,
-                                                          descriptorSetLayout);
-#endif
+  vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo {
+      .descriptorPool = descriptorPool,
+      .descriptorSetCount = 1,
+      .pSetLayouts = &descriptorSetLayout};
   // TODO: why is this mutliple sets?
   return device.allocateDescriptorSets(descriptorSetAllocateInfo).front();
 }
@@ -45,13 +48,17 @@ vk::DescriptorSet Executor::allocateDescriptorSet(
 vk::CommandPool Executor::createCommandPool(vk::CommandPoolCreateFlags flags,
                                             uint32_t queueIndex) const
 {
-  return device.createCommandPool({flags, queueIndex});
+  vk::CommandPoolCreateInfo commandPoolCreateInfo {
+      .flags = flags, .queueFamilyIndex = queueIndex};
+  return device.createCommandPool(commandPoolCreateInfo);
 }
 
 vk::CommandBuffer Executor::allocateCommandBuffer(
     vk::CommandPool& commandPool, vk::CommandBufferLevel level) const
 {
-  return device.allocateCommandBuffers({commandPool, level, 1}).front();
+  vk::CommandBufferAllocateInfo commandBufferAllocateInfo {
+      .commandPool = commandPool, .level = level, .commandBufferCount = 1};
+  return device.allocateCommandBuffers(commandBufferAllocateInfo).front();
 }
 
 Executor::~Executor()

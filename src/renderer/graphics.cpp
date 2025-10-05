@@ -33,5 +33,5 @@ void Graphics::insertImageMemoryBarrier(
   imageMemoryBarrier.subresourceRange = subresourceRange;
 
   commandBuffer.pipelineBarrier(
-      srcStageMask, dstStageMask, {}, nullptr, nullptr, imageMemoryBarrier);
+      srcStageMask, dstStageMask, {}, nullptr, nullptr, {imageMemoryBarrier});
 }

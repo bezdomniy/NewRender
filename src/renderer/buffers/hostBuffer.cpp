@@ -20,12 +20,14 @@ HostBuffer::HostBuffer(vk::Device& device,
     : Buffer(device, allocator)
 {
   try {
-    auto bufferCreateInfo = vk::BufferCreateInfo(
-        vk::BufferCreateFlags(), size, usageFlags, vk::SharingMode::eExclusive);
+    vk::BufferCreateInfo bufferCreateInfo {
+        .size = size,
+        .usage = usageFlags,
+        .sharingMode = vk::SharingMode::eExclusive,
+    };
 
-    VmaAllocationCreateInfo allocCreateInfo = {};
-    allocCreateInfo.usage = memoryUsage;
-    allocCreateInfo.flags = flags;
+    VmaAllocationCreateInfo allocCreateInfo {
+        .flags = flags, .usage = memoryUsage, .priority = 1.0F};
 
     auto rawBufferCreateInfo =
         static_cast<VkBufferCreateInfo>(bufferCreateInfo);
