@@ -34,7 +34,7 @@ Device::Device(vk::Instance& instance, vk::SurfaceKHR* surface)
   memoryProperties = physicalDevice.getMemoryProperties();
 
   // create a Device
-  float queuePriority = 0.0f;
+  float queuePriority = 0.0F;
   vk::DeviceQueueCreateInfo deviceQueueCreateInfo {
       .queueFamilyIndex = surface ? queueFamilyIndices.graphicsFamily.value()
                                   : queueFamilyIndices.computeFamily.value(),
@@ -165,10 +165,10 @@ vk::Pipeline Device::createGraphicsPipeline(
   //     .polygonMode = polygon_mode,
   //     .cullMode = cull_mode,
   //     .frontFace = front_face,
-  //     .lineWidth = 1.0f};
+  //     .lineWidth = 1.0F};
 
   vk::PipelineRasterizationStateCreateInfo rasterizationState {
-      .polygonMode = vk::PolygonMode::eFill, .lineWidth = 1.0f};
+      .polygonMode = vk::PolygonMode::eFill, .lineWidth = 1.0F};
 
   // vk::PipelineMultisampleStateCreateInfo multisample_state {
   //     .rasterizationSamples = vk::SampleCountFlagBits::e1};

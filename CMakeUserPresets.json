@@ -14,9 +14,7 @@
             "displayName": "Debug",
             "description": "Debug build with full symbols",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "1"
+                "CMAKE_BUILD_TYPE": "Debug"
             }
         },
         {
@@ -27,9 +25,7 @@
             "displayName": "Release",
             "description": "Optimized release build",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "1"
+                "CMAKE_BUILD_TYPE": "Release"
             }
         },
         {
@@ -40,9 +36,7 @@
             "displayName": "RelWithDebInfo",
             "description": "Release build with debug symbols",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "1"
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
             }
         }
     ]

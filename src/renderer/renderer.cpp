@@ -155,7 +155,7 @@ void Renderer::initCompute()
                              | vk::BufferUsageFlagBits::eTransferSrc
                              | vk::BufferUsageFlagBits::eTransferDst);
 
-  compute->commandBuffer.begin(vk::CommandBufferBeginInfo());
+  compute->commandBuffer.begin(vk::CommandBufferBeginInfo {});
 
   compute->commandBuffer.copyBuffer(
       hostBuffer0.handle,
@@ -290,7 +290,7 @@ void Renderer::update() const
   const auto& deviceResultBuffer = deviceBuffers.at("result");
 
   // Execute compute pipeline
-  compute->commandBuffer.begin(vk::CommandBufferBeginInfo());
+  compute->commandBuffer.begin(vk::CommandBufferBeginInfo {});
 
   // Barrier to ensure that input buffer transfer is finished before compute
   // shader reads from it
@@ -421,10 +421,11 @@ void Renderer::draw()
           .setLoadOp(vk::AttachmentLoadOp::eClear)
           .setStoreOp(vk::AttachmentStoreOp::eStore)
           .setClearValue(vk::ClearValue(vk::ClearColorValue(
-              std::array<float, 4> {0.0f, 0.0f, 0.0f, 1.0f})));
+              std::array<float, 4> {0.0F, 0.0F, 0.0F, 1.0F})));
 
   auto renderingInfo = vk::RenderingInfoKHR()
-                           .setRenderArea({{0, 0}, swapchainExtent})
+                           .setRenderArea({.offset = {.x = 0, .y = 0},
+                                           .extent = swapchainExtent})
                            .setLayerCount(1)
                            .setColorAttachmentCount(1)
                            .setPColorAttachments(&colorAttachmentInfo);
@@ -437,20 +438,24 @@ void Renderer::draw()
       vk::AccessFlagBits::eColorAttachmentWrite,
       vk::ImageLayout::eUndefined,
       vk::ImageLayout::eColorAttachmentOptimal,
+      vk::PipelineStageFlagBits::eTopOfPipe,
       vk::PipelineStageFlagBits::eColorAttachmentOutput,
-      vk::PipelineStageFlagBits::eColorAttachmentOutput,
-      vk::ImageSubresourceRange {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1});
+      vk::ImageSubresourceRange {.aspectMask = vk::ImageAspectFlagBits::eColor,
+                                 .baseMipLevel = 0,
+                                 .levelCount = 1,
+                                 .baseArrayLayer = 0,
+                                 .layerCount = 1});
 
-  graphics->commandBuffer.beginRendering(renderingInfo);
+  graphics->commandBuffer.beginRenderingKHR(renderingInfo);
 
-  vk::Viewport viewport(0.0f,
-                        0.0f,
+  vk::Viewport viewport(0.0F,
+                        0.0F,
                         static_cast<float>(swapchainExtent.width),
                         static_cast<float>(swapchainExtent.height),
-                        0.0f,
-                        1.0f);
+                        0.0F,
+                        1.0F);
 
-  vk::Rect2D scissor({0, 0}, swapchainExtent);
+  vk::Rect2D scissor({.x = 0, .y = 0}, swapchainExtent);
   graphics->commandBuffer.setViewport(0, viewport);
   graphics->commandBuffer.setScissor(0, scissor);
 
@@ -463,7 +468,7 @@ void Renderer::draw()
   graphics->commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
                                        graphics->pipelines.at("graphics1"));
 
-  graphics->commandBuffer.endRendering();
+  graphics->commandBuffer.endRenderingKHR();
 
   graphics->insertImageMemoryBarrier(
       images[currentImageIndex],
@@ -473,7 +478,11 @@ void Renderer::draw()
       vk::ImageLayout::ePresentSrcKHR,
       vk::PipelineStageFlagBits::eColorAttachmentOutput,
       vk::PipelineStageFlagBits::eBottomOfPipe,
-      vk::ImageSubresourceRange {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1});
+      vk::ImageSubresourceRange {.aspectMask = vk::ImageAspectFlagBits::eColor,
+                                 .baseMipLevel = 0,
+                                 .levelCount = 1,
+                                 .baseArrayLayer = 0,
+                                 .layerCount = 1});
 
   graphics->commandBuffer.end();
 
@@ -492,6 +501,7 @@ void Renderer::draw()
       .waitSemaphoreCount = 1,
       .pWaitSemaphores = &acquireSemaphore,
       .pWaitDstStageMask = &waitPipelineStage,
+      .commandBufferCount = 1,
       .pCommandBuffers = &graphics->commandBuffer,
       .signalSemaphoreCount = 1,
       .pSignalSemaphores = &signalSemaphore,
@@ -516,8 +526,7 @@ void Renderer::draw()
                                   .pWaitSemaphores = &signalSemaphore,
                                   .swapchainCount = 1,
                                   .pSwapchains = &swapchain,
-                                  .pImageIndices = &currentImageIndex,
-                                  .pResults = results.data()};
+                                  .pImageIndices = &currentImageIndex};
 
   if (device->graphicsQueue.presentKHR(presentInfo) != vk::Result::eSuccess) {
     throw std::runtime_error("Failed present.");
